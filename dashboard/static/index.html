@@ -3,61 +3,108 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ODOCUST Academic Monitoring Agent</title>
+    <title>ODOCUST Academic Intelligence Agent | Autonomous Academic Copilot</title>
     <link rel="stylesheet" href="/static/style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
+    <div class="ambient-glow glow-1"></div>
+    <div class="ambient-glow glow-2"></div>
+    <div class="ambient-glow glow-3"></div>
+
     <div class="app-layout">
         <!-- Sidebar Navigation -->
         <aside class="sidebar">
             <div class="brand">
-                <div class="brand-icon">🎓</div>
+                <div class="brand-icon">
+                    <span class="brand-emoji">🎓</span>
+                    <span class="brand-pulse"></span>
+                </div>
                 <div class="brand-text">
-                    <h2>ODOCUST</h2>
-                    <span>Academic Agent</span>
+                    <div class="brand-title">ODOCUST<span class="brand-pro">AI</span></div>
+                    <span class="brand-sub">Academic Intelligence</span>
+                </div>
+            </div>
+
+            <!-- Student Quick Badge -->
+            <div class="sidebar-student-card">
+                <div class="student-avatar">AH</div>
+                <div class="student-info">
+                    <div class="student-name">Abdul Haseeb</div>
+                    <div class="student-meta">
+                        <span class="id-badge">BSE233195</span>
+                        <span class="sem-badge">Sem 7</span>
+                    </div>
                 </div>
             </div>
 
             <nav class="nav-menu">
+                <div class="nav-section-label">MONITORING & AI</div>
                 <button class="nav-item active" data-tab="overview">
-                    <span class="icon">📊</span> Overview
+                    <span class="icon">📊</span>
+                    <span class="nav-label">Overview</span>
+                    <span class="nav-indicator"></span>
+                </button>
+                <button class="nav-item nav-item-fyp" data-tab="fyp">
+                    <span class="icon">🎓</span>
+                    <span class="nav-label">FYP Command</span>
+                    <span class="badge badge-fyp-pulse">PRIORITY</span>
                 </button>
                 <button class="nav-item" data-tab="ai-copilot">
-                    <span class="icon">🤖</span> AI Copilot & GPA
+                    <span class="icon">🤖</span>
+                    <span class="nav-label">AI Copilot & GPA</span>
                 </button>
                 <button class="nav-item" data-tab="deadlines">
-                    <span class="icon">⏰</span> Deadlines & Timeline
+                    <span class="icon">⏰</span>
+                    <span class="nav-label">Deadlines & Timeline</span>
+                    <span class="badge badge-counter" id="navDeadlineCount">0</span>
                 </button>
                 <button class="nav-item" data-tab="courses">
-                    <span class="icon">📚</span> My Courses
+                    <span class="icon">📚</span>
+                    <span class="nav-label">My Courses</span>
+                    <span class="badge badge-counter" id="navCourseCount">10</span>
                 </button>
                 <button class="nav-item" data-tab="activities">
-                    <span class="icon">📋</span> All Activities
+                    <span class="icon">📋</span>
+                    <span class="nav-label">All Activities & Docs</span>
                 </button>
-                <button class="nav-item" data-tab="notifications">
-                    <span class="icon">📱</span> WhatsApp Alerts
-                </button>
+
+                <div class="nav-section-label" style="margin-top: 14px;">GPA & SUBMISSION GUARD</div>
                 <button class="nav-item" data-tab="margin-guard">
-                    <span class="icon">🛡️</span> Margin Guard
+                    <span class="icon">🛡️</span>
+                    <span class="nav-label">Margin Guard</span>
+                    <span class="badge badge-guard">85% A</span>
                 </button>
                 <button class="nav-item" data-tab="rubric-auditor">
-                    <span class="icon">📝</span> Rubric Auditor
+                    <span class="icon">📝</span>
+                    <span class="nav-label">Rubric Auditor</span>
+                    <span class="badge badge-ai-chip">AI</span>
+                </button>
+
+                <div class="nav-section-label" style="margin-top: 14px;">SYSTEM & ALERTS</div>
+                <button class="nav-item" data-tab="notifications">
+                    <span class="icon">📱</span>
+                    <span class="nav-label">Alerts & Logs</span>
                 </button>
                 <button class="nav-item" data-tab="settings">
-                    <span class="icon">⚙️</span> Settings
+                    <span class="icon">⚙️</span>
+                    <span class="nav-label">Settings</span>
                 </button>
             </nav>
 
             <div class="sidebar-footer">
-                <div class="portal-status-badge" id="portalStatusBadge">
-                    <span class="pulse-dot"></span>
-                    <span id="portalStatusText">Connecting...</span>
+                <div class="portal-status-card">
+                    <div class="portal-status-badge" id="portalStatusBadge">
+                        <span class="pulse-dot"></span>
+                        <span id="portalStatusText">Connecting...</span>
+                    </div>
+                    <div class="portal-sub-text">ODOCUST / Tasjeel 15.0</div>
                 </div>
                 <button class="btn btn-primary btn-block btn-sync" id="btnSyncNow">
-                    🔄 Sync Now
+                    <span class="sync-icon">🔄</span>
+                    <span class="sync-text">Sync Portal Now</span>
                 </button>
             </div>
         </aside>
@@ -66,53 +113,175 @@
         <main class="main-content">
             <!-- Top Header -->
             <header class="topbar">
-                <div class="topbar-title">
+                <div class="topbar-left">
                     <h1 id="pageTitle">Overview</h1>
-                    <span class="last-checked" id="lastCheckedText">Last checked: Just now</span>
+                    <div class="topbar-meta">
+                        <span class="meta-dot"></span>
+                        <span class="last-checked" id="lastCheckedText">Last checked: Just now</span>
+                        <span class="meta-sep">•</span>
+                        <span class="meta-schedule">Background Auto-Check: Every 10h</span>
+                    </div>
                 </div>
                 <div class="topbar-actions">
-                    <span class="badge badge-portal">Tasjeel / Odoo 15</span>
+                    <div class="academic-target-pill">
+                        <span class="target-label">GPA Target:</span>
+                        <span class="target-val" id="topbarGpaTarget">4.00</span>
+                        <span class="target-badge">Grade A</span>
+                    </div>
+                    <span class="badge badge-portal-live">
+                        <span class="live-dot"></span> Portal Live Sync
+                    </span>
                 </div>
             </header>
 
             <div class="tab-content" id="tabContent">
-                <!-- TAB 1: OVERVIEW -->
+                
+                <!-- =========================================================
+                     TAB 1: OVERVIEW (EXECUTIVE COMMAND CENTER)
+                     ========================================================= -->
                 <section class="tab-pane active" id="pane-overview">
-                    <div class="stats-grid">
-                        <div class="stat-card stat-critical">
-                            <div class="stat-icon">🚨</div>
-                            <div class="stat-data">
-                                <div class="stat-value" id="statUpcoming24h">0</div>
-                                <div class="stat-label">Due Within 24h</div>
+                    
+                    <!-- Executive Student & Academic Overview Strip -->
+                    <div class="executive-banner-card">
+                        <div class="banner-glass-bg"></div>
+                        <div class="banner-content">
+                            <div class="banner-profile">
+                                <div class="banner-avatar">
+                                    <span>AH</span>
+                                    <div class="online-indicator"></div>
+                                </div>
+                                <div class="banner-profile-text">
+                                    <div class="banner-greeting">Good day, Abdul Haseeb</div>
+                                    <div class="banner-program">
+                                        <span>BS Software Engineering (Semester 7)</span>
+                                        <span class="badge badge-subtle">CUST Islamabad</span>
+                                    </div>
+                                    <div class="banner-reg-meta">Registration: <strong>BSE233195</strong></div>
+                                </div>
                             </div>
-                        </div>
-                        <div class="stat-card stat-pending">
-                            <div class="stat-icon">⏳</div>
-                            <div class="stat-data">
-                                <div class="stat-value" id="statPending">0</div>
-                                <div class="stat-label">Pending Submissions</div>
-                            </div>
-                        </div>
-                        <div class="stat-card stat-completed">
-                            <div class="stat-icon">✅</div>
-                            <div class="stat-data">
-                                <div class="stat-value" id="statSubmitted">0</div>
-                                <div class="stat-label">Submitted / Graded</div>
-                            </div>
-                        </div>
-                        <div class="stat-card stat-overdue">
-                            <div class="stat-icon">⚠️</div>
-                            <div class="stat-data">
-                                <div class="stat-value" id="statOverdue">0</div>
-                                <div class="stat-label">Overdue Tasks</div>
+                            <div class="banner-metrics">
+                                <div class="banner-metric-box">
+                                    <span class="b-metric-label">Current CGPA</span>
+                                    <span class="b-metric-val" id="ovCurrentCgpa">3.20</span>
+                                    <span class="b-metric-sub">100 Credit Hours</span>
+                                </div>
+                                <div class="banner-metric-box highlight">
+                                    <span class="b-metric-label">Semester Goal</span>
+                                    <span class="b-metric-val" id="ovTargetGpa">4.00</span>
+                                    <span class="b-metric-sub text-success">Target CGPA: 3.50+</span>
+                                </div>
+                                <div class="banner-metric-box">
+                                    <span class="b-metric-label">Avg Attendance</span>
+                                    <span class="b-metric-val" id="ovAvgAttendance">100.0%</span>
+                                    <span class="b-metric-sub text-success">Safe Zone (&gt;75%)</span>
+                                </div>
                             </div>
                         </div>
                     </div>
 
+                    <!-- Modern Stats Counters Grid (5 Cards) -->
+                    <div class="stats-grid-5">
+                        <div class="stat-card stat-critical">
+                            <div class="stat-header">
+                                <span class="stat-icon-wrapper">🚨</span>
+                                <span class="stat-trend trend-critical">Urgent</span>
+                            </div>
+                            <div class="stat-data">
+                                <div class="stat-value" id="statUpcoming24h">0</div>
+                                <div class="stat-label">Due Within 24h</div>
+                            </div>
+                            <div class="stat-footer-bar critical-bar"></div>
+                        </div>
+
+                        <div class="stat-card stat-pending">
+                            <div class="stat-header">
+                                <span class="stat-icon-wrapper">⏳</span>
+                                <span class="stat-trend trend-pending">Active</span>
+                            </div>
+                            <div class="stat-data">
+                                <div class="stat-value" id="statPending">0</div>
+                                <div class="stat-label">Pending Tasks</div>
+                            </div>
+                            <div class="stat-footer-bar pending-bar"></div>
+                        </div>
+
+                        <div class="stat-card stat-fyp-highlight">
+                            <div class="stat-header">
+                                <span class="stat-icon-wrapper">🎓</span>
+                                <span class="stat-trend trend-gold">High Priority</span>
+                            </div>
+                            <div class="stat-data">
+                                <div class="stat-value" id="statFypActivities">16</div>
+                                <div class="stat-label">FYP Deliverables</div>
+                            </div>
+                            <div class="stat-footer-bar gold-bar"></div>
+                        </div>
+
+                        <div class="stat-card stat-completed">
+                            <div class="stat-header">
+                                <span class="stat-icon-wrapper">✅</span>
+                                <span class="stat-trend trend-success">Synced</span>
+                            </div>
+                            <div class="stat-data">
+                                <div class="stat-value" id="statSubmitted">0</div>
+                                <div class="stat-label">Submitted / Graded</div>
+                            </div>
+                            <div class="stat-footer-bar success-bar"></div>
+                        </div>
+
+                        <div class="stat-card stat-courses">
+                            <div class="stat-header">
+                                <span class="stat-icon-wrapper">📚</span>
+                                <span class="stat-trend trend-info">Enrolled</span>
+                            </div>
+                            <div class="stat-data">
+                                <div class="stat-value" id="statTotalCourses">10</div>
+                                <div class="stat-label">Active Courses</div>
+                            </div>
+                            <div class="stat-footer-bar info-bar"></div>
+                        </div>
+                    </div>
+
+                    <!-- FYP High Priority Spotlight Banner -->
+                    <div class="fyp-spotlight-card">
+                        <div class="fyp-spotlight-header">
+                            <div class="fyp-tag-group">
+                                <span class="badge badge-gold-glow">🎓 CRITICAL PRIORITY: FINAL YEAR PROJECT</span>
+                                <span class="badge badge-subtle">Design Project (Part-I) • SE4912</span>
+                            </div>
+                            <button class="btn btn-gold btn-sm" onclick="switchTab('fyp')">Open FYP Command Center ➔</button>
+                        </div>
+                        <div class="fyp-spotlight-body">
+                            <div class="fyp-spotlight-info">
+                                <h3>Design Project (Part-I) • Autonomous FYP Tracking</h3>
+                                <p>All FYP announcements, Proposal Symposium schedules, orientation templates, and supervisor guidelines are actively extracted, auto-downloaded, and parsed with high-priority dispatch.</p>
+                                <div class="fyp-quick-tags">
+                                    <span class="fyp-chip">📑 10 Guidelines & Templates Downloaded</span>
+                                    <span class="fyp-chip">📅 Proposal Symposium Schedule Ready</span>
+                                    <span class="fyp-chip">🤖 AI 2-Line Summaries Generated</span>
+                                </div>
+                            </div>
+                            <div class="fyp-spotlight-status">
+                                <div class="fyp-status-circle">
+                                    <span class="status-num">100%</span>
+                                    <span class="status-lbl">FYP Monitored</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dashboard Split View -->
                     <div class="dashboard-split">
                         <div class="card flex-2">
                             <div class="card-header">
-                                <h3>🔥 Urgent Approaching Deadlines</h3>
+                                <div class="card-header-left">
+                                    <span class="card-icon">🔥</span>
+                                    <div>
+                                        <h3>Urgent Approaching Deadlines</h3>
+                                        <p class="card-subtitle">Real-time countdown checkpoints (72h, 48h, 24h, 12h, 6h, 3h, 1h)</p>
+                                    </div>
+                                </div>
+                                <span class="badge badge-subtle">Automatic Reminders Active</span>
                             </div>
                             <div class="urgent-list" id="urgentDeadlinesList">
                                 <p class="empty-state">No imminent deadlines within 72 hours! 🎉</p>
@@ -121,7 +290,13 @@
 
                         <div class="card flex-1">
                             <div class="card-header">
-                                <h3>🔔 Recent WhatsApp Alerts</h3>
+                                <div class="card-header-left">
+                                    <span class="card-icon">🔔</span>
+                                    <div>
+                                        <h3>Recent Dispatches</h3>
+                                        <p class="card-subtitle">Telegram & WhatsApp Alerts</p>
+                                    </div>
+                                </div>
                             </div>
                             <div class="compact-notifications" id="recentAlertsList">
                                 <p class="empty-state">No alerts recorded yet.</p>
@@ -130,99 +305,95 @@
                     </div>
                 </section>
 
-                <!-- TAB 2: DEADLINES & TIMELINE -->
-                <section class="tab-pane" id="pane-deadlines">
-                    <div class="card">
-                        <div class="card-header">
-                            <h3>⏳ Academic Countdown Timeline</h3>
-                            <div class="filters">
-                                <select id="filterTimelineCourse" class="form-control form-control-sm">
-                                    <option value="">All Courses</option>
-                                </select>
+                <!-- =========================================================
+                     TAB 2: DEDICATED FYP COMMAND CENTER (HIGHEST PRIORITY)
+                     ========================================================= -->
+                <section class="tab-pane" id="pane-fyp">
+                    <div class="fyp-hero-header">
+                        <div class="fyp-hero-content">
+                            <div class="fyp-badge-row">
+                                <span class="badge badge-gold-glow">⭐ SEPARATE HIGH-PRIORITY FYP MONITOR</span>
+                                <span class="badge badge-subtle">Course: Design Project (Part-I) • SE4912</span>
+                                <span class="badge badge-subtle">Group Registration: BSE233195</span>
+                            </div>
+                            <h1>Final Year Project Command Center</h1>
+                            <p>Continuous intelligent monitoring of all FYP deliverables, symposium defense dates, supervisor review forms, and research/software project templates.</p>
+                        </div>
+                    </div>
+
+                    <!-- FYP 4-Card Status Bar -->
+                    <div class="fyp-metrics-grid">
+                        <div class="fyp-metric-card">
+                            <div class="fyp-m-icon">🏛️</div>
+                            <div class="fyp-m-data">
+                                <div class="fyp-m-val">Design Project (Part-I)</div>
+                                <div class="fyp-m-lbl">Course Title (SE4912)</div>
                             </div>
                         </div>
-                        <div class="timeline-container" id="timelineContainer">
-                            <!-- Injected by JS -->
-                        </div>
-                    </div>
-                </section>
-
-                <!-- TAB 3: COURSES -->
-                <section class="tab-pane" id="pane-courses">
-                    <div class="courses-grid" id="coursesGrid">
-                        <!-- Injected by JS -->
-                    </div>
-                </section>
-
-                <!-- TAB 4: ALL ACTIVITIES -->
-                <section class="tab-pane" id="pane-activities">
-                    <div class="card">
-                        <div class="card-header">
-                            <div class="table-controls">
-                                <input type="text" id="searchActivities" placeholder="Search tasks, courses, announcements..." class="form-control">
-                                <select id="filterType" class="form-control">
-                                    <option value="">All Types</option>
-                                    <option value="Assignment">Assignments</option>
-                                    <option value="Project">Projects</option>
-                                    <option value="Quiz">Quizzes</option>
-                                    <option value="Announcement">Announcements</option>
-                                </select>
-                                <select id="filterStatus" class="form-control">
-                                    <option value="">All Statuses</option>
-                                    <option value="Not Submitted">Not Submitted</option>
-                                    <option value="Submitted">Submitted</option>
-                                    <option value="Graded">Graded</option>
-                                </select>
+                        <div class="fyp-metric-card">
+                            <div class="fyp-m-icon">📅</div>
+                            <div class="fyp-m-data">
+                                <div class="fyp-m-val">Proposal Symposium</div>
+                                <div class="fyp-m-lbl">Upcoming Milestone</div>
                             </div>
                         </div>
-                        <div class="table-responsive">
-                            <table class="data-table">
-                                <thead>
-                                    <tr>
-                                        <th>Priority</th>
-                                        <th>Type</th>
-                                        <th>Course</th>
-                                        <th>Title & Details</th>
-                                        <th>Deadline</th>
-                                        <th>Status</th>
-                                        <th>Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="activitiesTableBody">
-                                    <!-- Injected by JS -->
-                                </tbody>
-                            </table>
+                        <div class="fyp-metric-card">
+                            <div class="fyp-m-icon">💾</div>
+                            <div class="fyp-m-data">
+                                <div class="fyp-m-val" id="fypFilesCount">10 Files</div>
+                                <div class="fyp-m-lbl">Auto-Downloaded Offline</div>
+                            </div>
                         </div>
+                        <div class="fyp-metric-card">
+                            <div class="fyp-m-icon">🤖</div>
+                            <div class="fyp-m-data">
+                                <div class="fyp-m-val">Gemini 3.8 Flash</div>
+                                <div class="fyp-m-lbl">Document Intelligence</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- FYP Filter Pills -->
+                    <div class="fyp-tabs-bar">
+                        <button class="fyp-filter-btn active" data-fyp-filter="all">All FYP Items (16)</button>
+                        <button class="fyp-filter-btn" data-fyp-filter="Material">Templates & Forms</button>
+                        <button class="fyp-filter-btn" data-fyp-filter="Project">Symposium & Submissions</button>
+                        <button class="fyp-filter-btn" data-fyp-filter="Announcement">Announcements & Notices</button>
+                    </div>
+
+                    <!-- FYP Activities & Document Cards Grid -->
+                    <div class="fyp-cards-grid" id="fypCardsGrid">
+                        <!-- Populated by JS -->
                     </div>
                 </section>
 
-                <!-- TAB 5: NOTIFICATIONS LOG -->
-                <section class="tab-pane" id="pane-notifications">
-                    <div class="card">
-                        <div class="card-header">
-                            <h3>📱 WhatsApp Dispatch History</h3>
-                        </div>
-                        <div class="notification-logs" id="notificationsLogList">
-                            <!-- Injected by JS -->
-                        </div>
-                    </div>
-                </section>
-
-                <!-- TAB: AI COPILOT & GPA ENGINE -->
+                <!-- =========================================================
+                     TAB 3: AI COPILOT & GPA ENGINE
+                     ========================================================= -->
                 <section class="tab-pane" id="pane-ai-copilot">
                     <div class="ai-copilot-grid">
                         <!-- AI Academic Advisor Chat -->
                         <div class="card ai-chat-card">
                             <div class="card-header">
-                                <h3>🤖 Academic Copilot & Document Intelligence</h3>
-                                <span class="badge badge-success">Gemini 3.8 Flash Ready</span>
+                                <div class="card-header-left">
+                                    <span class="card-icon">🤖</span>
+                                    <div>
+                                        <h3>Academic Copilot & Document Intelligence</h3>
+                                        <p class="card-subtitle">Natural query answering, 2-3 line brief generation, and strategic GPA advising</p>
+                                    </div>
+                                </div>
+                                <span class="badge badge-success">
+                                    <span class="pulse-dot-green"></span> Gemini 3.8 Flash
+                                </span>
                             </div>
+
                             <div class="ai-prompts-bar">
                                 <button class="ai-prompt-chip" data-prompt="How can I improve my CGPA to 3.5 this semester?">🎯 Improve CGPA to 3.5</button>
                                 <button class="ai-prompt-chip" data-prompt="What deadlines and assignments do I have coming up?">📅 Upcoming Deadlines</button>
                                 <button class="ai-prompt-chip" data-prompt="Summarize the latest FYP schedule and requirements.">🎓 FYP Symposium Status</button>
                                 <button class="ai-prompt-chip" data-prompt="Give me strategic academic advice for my courses.">💡 Course Strategy</button>
                             </div>
+
                             <div class="ai-chat-messages" id="aiChatMessages">
                                 <div class="ai-message assistant">
                                     <div class="ai-avatar">🤖</div>
@@ -234,17 +405,28 @@
                                     </div>
                                 </div>
                             </div>
+
                             <div class="ai-chat-input-bar">
                                 <input type="text" id="aiUserInput" class="form-control" placeholder="Ask about deadlines, GPA improvement, assignments, or FYP...">
-                                <button class="btn btn-primary" id="btnSendAiQuery">Ask Agent</button>
+                                <button class="btn btn-primary" id="btnSendAiQuery">
+                                    <span>Ask Agent</span>
+                                    <span>➔</span>
+                                </button>
                             </div>
                         </div>
 
                         <!-- CUST GPA Simulator & Final Exam Target Calculator -->
                         <div class="card gpa-simulator-card">
                             <div class="card-header">
-                                <h3>📊 CUST Degree & GPA Simulator</h3>
+                                <div class="card-header-left">
+                                    <span class="card-icon">📊</span>
+                                    <div>
+                                        <h3>CUST Degree & GPA Simulator</h3>
+                                        <p class="card-subtitle">Official CUST Quality Points Scale (A = 85%, 4.00)</p>
+                                    </div>
+                                </div>
                             </div>
+
                             <div class="gpa-form">
                                 <div class="form-row">
                                     <div class="form-group col">
@@ -260,9 +442,9 @@
                                     <div class="form-group col">
                                         <label>Target Semester GPA</label>
                                         <select id="simTargetGpa" class="form-control">
-                                            <option value="4.00">4.00 (All A's)</option>
+                                            <option value="4.00" selected>4.00 (Flat A in all courses)</option>
                                             <option value="3.80">3.80 (A's & A-'s)</option>
-                                            <option value="3.66" selected>3.66 (Target A- average)</option>
+                                            <option value="3.66">3.66 (Target A- average)</option>
                                             <option value="3.33">3.33 (Target B+ average)</option>
                                             <option value="3.00">3.00 (Target B average)</option>
                                         </select>
@@ -270,14 +452,12 @@
                                 </div>
                                 <button class="btn btn-primary btn-block" id="btnSimulateGpa">🚀 Calculate GPA Projection</button>
                                 
-                                <div class="gpa-result-box" id="gpaResultBox">
-                                    <!-- Injected by JS -->
-                                </div>
+                                <div class="gpa-result-box" id="gpaResultBox"></div>
 
-                                <hr style="margin: 20px 0; border: none; border-top: 1px solid var(--border-color);">
+                                <div class="calc-divider"></div>
 
                                 <h4>📝 Final Exam Target Calculator</h4>
-                                <small class="form-hint" style="margin-bottom: 12px; display: block;">See what marks you need in the Final Exam to secure an A, B+, or B.</small>
+                                <small class="form-hint" style="margin-bottom: 12px; display: block;">Calculate exact final exam marks needed after your sessional score to achieve target grade.</small>
                                 <div class="form-row">
                                     <div class="form-group col">
                                         <label>Sessional Scored</label>
@@ -305,72 +485,122 @@
                                     </div>
                                 </div>
                                 <button class="btn btn-outline btn-block" id="btnCalcFinal">Calculate Needed Final Marks</button>
-                                <div class="calc-result-box" id="calcResultBox" style="margin-top: 12px;"></div>
+                                <div class="calc-result-box" id="calcResultBox"></div>
                             </div>
                         </div>
-                    </div>
-                </section>
-
-                <!-- TAB 6: SETTINGS -->
-                <section class="tab-pane" id="pane-settings">
-                    <div class="card max-w-700">
-                        <div class="card-header">
-                            <h3>⚙️ Agent & Notification Settings</h3>
-                        </div>
-                        <form id="settingsForm" class="settings-form">
-                            <div class="form-group">
-                                <label>Portal Monitoring Interval (Minutes)</label>
-                                <input type="number" id="settingInterval" class="form-control" min="5" max="180" value="15">
-                                <small class="form-hint">How often the agent checks ODOCUST in the background (default: 15 mins).</small>
-                            </div>
-
-                            <div class="form-group">
-                                <label>WhatsApp Provider</label>
-                                <select id="settingProvider" class="form-control">
-                                    <option value="console_log">Console / Dashboard Only (Testing)</option>
-                                    <option value="callmebot">CallMeBot (Free for Personal WhatsApp)</option>
-                                    <option value="twilio">Twilio WhatsApp (Official API)</option>
-                                    <option value="greenapi">Green-API Gateway</option>
-                                </select>
-                            </div>
-
-                            <div class="form-group">
-                                <label>Recipient WhatsApp Number</label>
-                                <input type="text" id="settingPhone" class="form-control" placeholder="+923001234567">
-                                <small class="form-hint">Enter your phone number with international country code (e.g. +92 for Pakistan).</small>
-                            </div>
-
-                            <div class="form-group">
-                                <label>Deadline Reminder Intervals (Hours Before Deadline)</label>
-                                <input type="text" id="settingReminderHours" class="form-control" value="72, 48, 24, 12, 6, 3, 1">
-                                <small class="form-hint">Comma-separated countdown checkpoints.</small>
-                            </div>
-
-                            <div class="form-group">
-                                <label>Daily Summary Morning Time</label>
-                                <input type="time" id="settingDailyTime" class="form-control" value="08:00">
-                            </div>
-
-                            <div class="form-actions">
-                                <button type="submit" class="btn btn-primary">Save Settings</button>
-                                <button type="button" class="btn btn-outline" id="btnTestWhatsApp">Send Test WhatsApp</button>
-                            </div>
-                        </form>
                     </div>
                 </section>
 
                 <!-- =========================================================
-                     PANE: SESSIONAL MARGIN GUARD
+                     TAB 4: DEADLINES & TIMELINE
                      ========================================================= -->
-                <section class="content-pane" id="pane-margin-guard">
-                    <div class="pane-header">
-                        <h1>🛡️ Sessional Margin Guard</h1>
-                        <p class="pane-subtitle">Track marks per component. Get alerted before you drop below 85% (Grade A)</p>
+                <section class="tab-pane" id="pane-deadlines">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-header-left">
+                                <span class="card-icon">⏳</span>
+                                <div>
+                                    <h3>Academic Countdown Timeline</h3>
+                                    <p class="card-subtitle">Chronological deadline queue across all enrolled courses</p>
+                                </div>
+                            </div>
+                            <div class="filters">
+                                <select id="filterTimelineCourse" class="form-control form-control-sm">
+                                    <option value="">All Courses</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="timeline-container" id="timelineContainer"></div>
+                    </div>
+                </section>
+
+                <!-- =========================================================
+                     TAB 5: MY COURSES
+                     ========================================================= -->
+                <section class="tab-pane" id="pane-courses">
+                    <div class="section-title-strip">
+                        <div>
+                            <h2>Enrolled Subjects (Fall 2026)</h2>
+                            <p class="text-secondary">Continuous monitoring of Attendance, Materials, Assessments, Submissions, and Announcements</p>
+                        </div>
+                        <span class="badge badge-info" id="coursesTotalBadge">10 Subjects Monitored</span>
+                    </div>
+                    <div class="courses-grid" id="coursesGrid"></div>
+                </section>
+
+                <!-- =========================================================
+                     TAB 6: ALL ACTIVITIES & DOCUMENT INTELLIGENCE
+                     ========================================================= -->
+                <section class="tab-pane" id="pane-activities">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-header-left">
+                                <span class="card-icon">📋</span>
+                                <div>
+                                    <h3>Academic Activities & Documents</h3>
+                                    <p class="card-subtitle">Parsed tasks, downloaded attachments, and AI summaries</p>
+                                </div>
+                            </div>
+                            <div class="table-controls">
+                                <input type="text" id="searchActivities" placeholder="Search tasks, courses, announcements..." class="form-control">
+                                <select id="filterType" class="form-control">
+                                    <option value="">All Types</option>
+                                    <option value="Assignment">Assignments</option>
+                                    <option value="Project">Projects / FYP</option>
+                                    <option value="Quiz">Quizzes</option>
+                                    <option value="Announcement">Announcements</option>
+                                    <option value="Material">Materials / Docs</option>
+                                </select>
+                                <select id="filterStatus" class="form-control">
+                                    <option value="">All Statuses</option>
+                                    <option value="Not Submitted">Not Submitted</option>
+                                    <option value="Submitted">Submitted</option>
+                                    <option value="Graded">Graded</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Priority</th>
+                                        <th>Type</th>
+                                        <th>Course</th>
+                                        <th>Title & Document Intel</th>
+                                        <th>Deadline</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="activitiesTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- =========================================================
+                     TAB 7: SESSIONAL MARGIN GUARD (15-MARK BUFFER TRACKER)
+                     ========================================================= -->
+                <section class="tab-pane" id="pane-margin-guard">
+                    <div class="pane-header-strip">
+                        <div>
+                            <h1>🛡️ Sessional Margin Guard</h1>
+                            <p class="pane-subtitle">Live 15-Mark Buffer Tracker: calculates marks remaining before dropping below 85% (Grade A boundary)</p>
+                        </div>
+                        <span class="badge badge-guard-status">Target: ≥ 85% (Grade A)</span>
                     </div>
 
                     <!-- Add Mark Form -->
                     <div class="card mg-add-form">
-                        <h3>➕ Log Component Marks</h3>
+                        <div class="card-header">
+                            <div class="card-header-left">
+                                <span class="card-icon">➕</span>
+                                <div>
+                                    <h3>Log Component Marks</h3>
+                                    <p class="card-subtitle">Record quiz, assignment, midterm, or lab scores to track your buffer</p>
+                                </div>
+                            </div>
+                        </div>
                         <div class="form-row-4">
                             <div class="form-group">
                                 <label>Course</label>
@@ -393,23 +623,31 @@
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label>Obtained / Total</label>
+                                <label>Obtained / Total Marks</label>
                                 <div class="marks-inline">
-                                    <input type="number" id="mgObtained" class="form-control" placeholder="e.g. 18" step="0.5" min="0">
+                                    <input type="number" id="mgObtained" class="form-control" placeholder="18" step="0.5" min="0">
                                     <span>/</span>
-                                    <input type="number" id="mgTotal" class="form-control" placeholder="e.g. 20" step="0.5" min="1">
+                                    <input type="number" id="mgTotal" class="form-control" placeholder="20" step="0.5" min="1">
                                 </div>
                             </div>
                         </div>
-                        <button class="btn btn-primary" onclick="addMarkEntry()">Save Mark</button>
-                        <span id="mgSaveMsg" class="inline-msg"></span>
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <button class="btn btn-primary" onclick="addMarkEntry()">Save Mark Entry</button>
+                            <span id="mgSaveMsg" class="inline-msg"></span>
+                        </div>
                     </div>
 
-                    <!-- Report -->
+                    <!-- Margin Reports -->
                     <div class="card">
-                        <div class="card-header-row">
-                            <h3>📊 Course Margin Report</h3>
-                            <button class="btn btn-outline btn-sm" onclick="loadMarginReport()">🔄 Refresh</button>
+                        <div class="card-header">
+                            <div class="card-header-left">
+                                <span class="card-icon">📊</span>
+                                <div>
+                                    <h3>Course Buffer Reports</h3>
+                                    <p class="card-subtitle">Real-time alerts triggered when margin falls below 6 marks</p>
+                                </div>
+                            </div>
+                            <button class="btn btn-outline btn-sm" onclick="loadMarginReport()">🔄 Refresh Reports</button>
                         </div>
                         <div id="mgReportContainer">
                             <p class="empty-state">Loading margin report...</p>
@@ -418,17 +656,28 @@
                 </section>
 
                 <!-- =========================================================
-                     PANE: PRE-SUBMISSION RUBRIC AUDITOR
+                     TAB 8: PRE-SUBMISSION AI RUBRIC AUDITOR
                      ========================================================= -->
-                <section class="content-pane" id="pane-rubric-auditor">
-                    <div class="pane-header">
-                        <h1>📝 Pre-Submission Rubric Auditor</h1>
-                        <p class="pane-subtitle">Drop your draft in the <code>submissions/</code> folder, then audit it against the assignment rubric using AI</p>
+                <section class="tab-pane" id="pane-rubric-auditor">
+                    <div class="pane-header-strip">
+                        <div>
+                            <h1>📝 Pre-Submission AI Rubric Auditor</h1>
+                            <p class="pane-subtitle">Autonomous gap analysis: checks student drafts against assignment rubrics before portal upload</p>
+                        </div>
+                        <span class="badge badge-ai-chip">Powered by Gemini 3.8 Flash</span>
                     </div>
 
                     <!-- Audit Form -->
                     <div class="card ra-form">
-                        <h3>🔍 Run Rubric Audit</h3>
+                        <div class="card-header">
+                            <div class="card-header-left">
+                                <span class="card-icon">🔍</span>
+                                <div>
+                                    <h3>Run Rubric Audit</h3>
+                                    <p class="card-subtitle">Drop draft into <code>submissions/</code> folder or specify local file path</p>
+                                </div>
+                            </div>
+                        </div>
                         <div class="form-group">
                             <label>Draft File Path</label>
                             <input type="text" id="raDraftPath" class="form-control" placeholder="e.g. submissions/assignment1_draft.pdf">
@@ -443,35 +692,118 @@
                                 <input type="text" id="raAssignmentTitle" class="form-control" placeholder="e.g. Assignment 2">
                             </div>
                             <div class="form-group">
-                                <label>Activity ID (optional — links rubric from DB)</label>
-                                <input type="text" id="raActivityId" class="form-control" placeholder="Leave blank to auto-match">
+                                <label>Activity ID (optional — auto-links portal rubric)</label>
+                                <input type="text" id="raActivityId" class="form-control" placeholder="Leave blank to auto-detect">
                             </div>
                         </div>
                         <div class="form-group">
-                            <label>Assignment Description / Rubric (paste manually or leave blank to auto-detect)</label>
-                            <textarea id="raDescription" class="form-control" rows="4" placeholder="Paste assignment requirements or rubric here..."></textarea>
+                            <label>Assignment Description / Rubric (leave blank to auto-detect from downloaded files)</label>
+                            <textarea id="raDescription" class="form-control" rows="3" placeholder="Paste specific rubric rules or leave blank to match portal PDF..."></textarea>
                         </div>
                         <div class="form-actions">
-                            <button class="btn btn-primary" onclick="runRubricAudit()">🚀 Audit Draft</button>
+                            <button class="btn btn-primary" onclick="runRubricAudit()">🚀 Run AI Rubric Audit</button>
                             <button class="btn btn-outline" onclick="scanSubmissionsFolder()">📂 Scan submissions/ Folder</button>
                         </div>
                     </div>
 
-                    <!-- Audit Result -->
+                    <!-- Audit Result Card -->
                     <div class="card" id="raResultCard" style="display:none">
-                        <h3>✅ Audit Result</h3>
+                        <div class="card-header">
+                            <h3>✅ Rubric Gap Analysis Result</h3>
+                        </div>
                         <div id="raResultContent"></div>
                     </div>
 
-                    <!-- History -->
+                    <!-- Audit History -->
                     <div class="card">
-                        <div class="card-header-row">
-                            <h3>🕘 Audit History</h3>
-                            <button class="btn btn-outline btn-sm" onclick="loadAuditHistory()">🔄 Refresh</button>
+                        <div class="card-header">
+                            <div class="card-header-left">
+                                <span class="card-icon">🕘</span>
+                                <div>
+                                    <h3>Audit History</h3>
+                                    <p class="card-subtitle">Previous pre-submission audits and coverage ratings</p>
+                                </div>
+                            </div>
+                            <button class="btn btn-outline btn-sm" onclick="loadAuditHistory()">🔄 Refresh History</button>
                         </div>
                         <div id="raHistoryContainer">
                             <p class="empty-state">Loading audit history...</p>
                         </div>
+                    </div>
+                </section>
+
+                <!-- =========================================================
+                     TAB 9: NOTIFICATIONS & DISPATCH LOGS
+                     ========================================================= -->
+                <section class="tab-pane" id="pane-notifications">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-header-left">
+                                <span class="card-icon">📱</span>
+                                <div>
+                                    <h3>Alert Dispatch History</h3>
+                                    <p class="card-subtitle">Real-time alerts sent via Telegram / WhatsApp</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="notification-logs" id="notificationsLogList"></div>
+                    </div>
+                </section>
+
+                <!-- =========================================================
+                     TAB 10: SETTINGS
+                     ========================================================= -->
+                <section class="tab-pane" id="pane-settings">
+                    <div class="card max-w-700">
+                        <div class="card-header">
+                            <div class="card-header-left">
+                                <span class="card-icon">⚙️</span>
+                                <div>
+                                    <h3>Agent & Notification Settings</h3>
+                                    <p class="card-subtitle">Configure background check interval, notification channel, and alert timings</p>
+                                </div>
+                            </div>
+                        </div>
+                        <form id="settingsForm" class="settings-form">
+                            <div class="form-group">
+                                <label>Portal Monitoring Interval (Minutes)</label>
+                                <input type="number" id="settingInterval" class="form-control" min="5" max="1440" value="600">
+                                <small class="form-hint">Background monitoring interval (default 600 mins = twice daily check).</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Notification Channel</label>
+                                <select id="settingProvider" class="form-control">
+                                    <option value="telegram">Telegram (@Elite_trader_offical)</option>
+                                    <option value="console_log">Console / Dashboard Only (Testing)</option>
+                                    <option value="callmebot">CallMeBot (Personal WhatsApp)</option>
+                                    <option value="twilio">Twilio WhatsApp (Official API)</option>
+                                    <option value="greenapi">Green-API Gateway</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Recipient Contact (Phone / Handle)</label>
+                                <input type="text" id="settingPhone" class="form-control" placeholder="+923197445634">
+                                <small class="form-hint">Configured telegram handle or WhatsApp phone number.</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Deadline Reminder Checkpoints (Hours Before Deadline)</label>
+                                <input type="text" id="settingReminderHours" class="form-control" value="72, 48, 24, 12, 6, 3, 1">
+                                <small class="form-hint">Comma-separated countdown checkpoints.</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Daily Summary Morning Time</label>
+                                <input type="time" id="settingDailyTime" class="form-control" value="08:00">
+                            </div>
+
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">Save Settings</button>
+                                <button type="button" class="btn btn-outline" id="btnTestWhatsApp">Send Test Alert</button>
+                            </div>
+                        </form>
                     </div>
                 </section>
 
@@ -482,4 +814,3 @@
     <script src="/static/app.js"></script>
 </body>
 </html>
-

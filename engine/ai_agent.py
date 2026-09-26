@@ -29,7 +29,7 @@ class AcademicAIAgent:
             try:
                 from google import genai
                 self.client = genai.Client(api_key=self.api_key)
-                logger.info("✅ Gemini AI Client initialized successfully for Academic Agent.")
+                logger.info("[OK] Gemini AI Client initialized successfully for Academic Agent.")
             except Exception as e:
                 logger.warning(f"Could not initialize Google GenAI client: {e}. Falling back to heuristic engine.")
 

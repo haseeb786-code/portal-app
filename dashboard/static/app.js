@@ -3,6 +3,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let currentTab = "overview";
     let allActivities = [];
     let allCourses = [];
+    let currentFypFilter = "all";
 
     // Elements
     const navItems = document.querySelectorAll(".nav-item");
@@ -15,6 +16,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Init
     setupNavigation();
+    setupFypFilters();
     loadDashboardData();
     setInterval(loadDashboardData, 30000); // Polling UI data every 30s
 
@@ -22,50 +24,49 @@ document.addEventListener("DOMContentLoaded", () => {
         navItems.forEach(item => {
             item.addEventListener("click", () => {
                 const targetTab = item.getAttribute("data-tab");
-                navItems.forEach(i => i.classList.remove("active"));
-                tabPanes.forEach(p => p.classList.remove("active"));
-
-                item.classList.add("active");
-                const targetPane = document.getElementById(`pane-${targetTab}`);
-                if (targetPane) targetPane.classList.add("active");
-
-                currentTab = targetTab;
-                pageTitle.innerText = item.innerText.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]\s*/g, '');
+                activateTab(targetTab);
             });
         });
 
         // Sync Now action
-        btnSyncNow.addEventListener("click", async () => {
-            btnSyncNow.disabled = true;
-            btnSyncNow.innerText = "⏳ Syncing...";
-            try {
-                const res = await fetch("/api/trigger-check", { method: "POST" });
-                const data = await res.json();
-                setTimeout(() => {
+        if (btnSyncNow) {
+            btnSyncNow.addEventListener("click", async () => {
+                btnSyncNow.disabled = true;
+                btnSyncNow.innerHTML = `<span class="sync-icon">⏳</span><span class="sync-text">Syncing...</span>`;
+                try {
+                    const res = await fetch("/api/trigger-check", { method: "POST" });
+                    const data = await res.json();
+                    setTimeout(() => {
+                        btnSyncNow.disabled = false;
+                        btnSyncNow.innerHTML = `<span class="sync-icon">🔄</span><span class="sync-text">Sync Portal Now</span>`;
+                        loadDashboardData();
+                    }, 2500);
+                } catch (e) {
+                    alert("Failed to initiate sync: " + e.message);
                     btnSyncNow.disabled = false;
-                    btnSyncNow.innerText = "🔄 Sync Now";
-                    loadDashboardData();
-                }, 2500);
-            } catch (e) {
-                alert("Failed to initiate sync: " + e.message);
-                btnSyncNow.disabled = false;
-                btnSyncNow.innerText = "🔄 Sync Now";
-            }
-        });
+                    btnSyncNow.innerHTML = `<span class="sync-icon">🔄</span><span class="sync-text">Sync Portal Now</span>`;
+                }
+            });
+        }
 
         // Table filters
-        document.getElementById("searchActivities").addEventListener("input", renderActivitiesTable);
-        document.getElementById("filterType").addEventListener("change", renderActivitiesTable);
-        document.getElementById("filterStatus").addEventListener("change", renderActivitiesTable);
+        const searchInput = document.getElementById("searchActivities");
+        if (searchInput) searchInput.addEventListener("input", renderActivitiesTable);
+        const filterType = document.getElementById("filterType");
+        if (filterType) filterType.addEventListener("change", renderActivitiesTable);
+        const filterStatus = document.getElementById("filterStatus");
+        if (filterStatus) filterStatus.addEventListener("change", renderActivitiesTable);
 
         // Timeline filter
-        document.getElementById("filterTimelineCourse").addEventListener("change", renderTimeline);
+        const filterTimeline = document.getElementById("filterTimelineCourse");
+        if (filterTimeline) filterTimeline.addEventListener("change", renderTimeline);
 
         // AI Copilot events
         document.querySelectorAll(".ai-prompt-chip").forEach(chip => {
             chip.addEventListener("click", () => {
                 const prompt = chip.getAttribute("data-prompt");
-                document.getElementById("aiUserInput").value = prompt;
+                const input = document.getElementById("aiUserInput");
+                if (input) input.value = prompt;
                 sendAiQuery(prompt);
             });
         });
@@ -74,7 +75,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (btnSendAi) {
             btnSendAi.addEventListener("click", () => {
                 const input = document.getElementById("aiUserInput");
-                if (input.value.trim()) {
+                if (input && input.value.trim()) {
                     sendAiQuery(input.value.trim());
                     input.value = "";
                 }
@@ -100,8 +101,56 @@ document.addEventListener("DOMContentLoaded", () => {
         if (btnCalcFinal) btnCalcFinal.addEventListener("click", calculateFinalMarks);
 
         // Settings form
-        document.getElementById("settingsForm").addEventListener("submit", saveSettings);
-        document.getElementById("btnTestWhatsApp").addEventListener("click", sendTestWhatsApp);
+        const settingsForm = document.getElementById("settingsForm");
+        if (settingsForm) settingsForm.addEventListener("submit", saveSettings);
+        const btnTestWhatsapp = document.getElementById("btnTestWhatsApp");
+        if (btnTestWhatsapp) btnTestWhatsapp.addEventListener("click", sendTestWhatsApp);
+    }
+
+    function activateTab(targetTab) {
+        if (!targetTab) return;
+        currentTab = targetTab;
+
+        // Nav active state
+        navItems.forEach(i => {
+            if (i.getAttribute("data-tab") === targetTab) {
+                i.classList.add("active");
+                if (pageTitle) {
+                    const labelSpan = i.querySelector(".nav-label");
+                    pageTitle.innerText = labelSpan ? labelSpan.innerText : targetTab.toUpperCase();
+                }
+            } else {
+                i.classList.remove("active");
+            }
+        });
+
+        // Tab pane active state
+        document.querySelectorAll(".tab-pane").forEach(p => p.classList.remove("active"));
+        const targetPane = document.getElementById(`pane-${targetTab}`);
+        if (targetPane) {
+            targetPane.classList.add("active");
+        }
+
+        // Sub-pane hooks
+        if (targetTab === "margin-guard") {
+            populateCourseDropdown();
+            loadMarginReport();
+        } else if (targetTab === "rubric-auditor") {
+            loadAuditHistory();
+        } else if (targetTab === "fyp") {
+            renderFypCommandCenter();
+        }
+    }
+
+    function setupFypFilters() {
+        document.querySelectorAll(".fyp-filter-btn").forEach(btn => {
+            btn.addEventListener("click", () => {
+                document.querySelectorAll(".fyp-filter-btn").forEach(b => b.classList.remove("active"));
+                btn.classList.add("active");
+                currentFypFilter = btn.getAttribute("data-fyp-filter") || "all";
+                renderFypCommandCenter();
+            });
+        });
     }
 
     async function loadDashboardData() {
@@ -119,73 +168,115 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     async function fetchOverview() {
-        const res = await fetch("/api/overview");
-        const data = await res.json();
+        try {
+            const res = await fetch("/api/overview");
+            const data = await res.json();
 
-        document.getElementById("statUpcoming24h").innerText = data.upcoming_24h || 0;
-        document.getElementById("statPending").innerText = data.pending_assignments || 0;
-        document.getElementById("statSubmitted").innerText = data.submitted_count || 0;
-        document.getElementById("statOverdue").innerText = data.overdue_count || 0;
+            // Stats counters
+            setInnerText("statUpcoming24h", data.upcoming_24h || 0);
+            setInnerText("statPending", data.pending_assignments || 0);
+            setInnerText("statSubmitted", data.submitted_count || 0);
+            setInnerText("statOverdue", data.overdue_count || 0);
+            setInnerText("statTotalCourses", data.total_courses || 10);
+            setInnerText("navCourseCount", data.total_courses || 10);
+            setInnerText("coursesTotalBadge", `${data.total_courses || 10} Subjects Monitored`);
 
-        // Portal status
-        if (data.portal_status === "OK") {
-            portalStatusText.innerText = "Portal Connected";
-            portalStatusBadge.style.color = "var(--success)";
-        } else {
-            portalStatusText.innerText = "Check Warning: " + (data.portal_last_error || "Offline");
-            portalStatusBadge.style.color = "var(--critical)";
-        }
+            // FYP activities count
+            if (data.fyp_activities_count !== undefined) {
+                setInnerText("statFypActivities", data.fyp_activities_count);
+            }
 
-        if (data.portal_last_checked) {
-            const dt = new Date(data.portal_last_checked);
-            lastCheckedText.innerText = "Last checked: " + dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            // Executive profile metrics
+            if (data.profile) {
+                setInnerText("ovCurrentCgpa", data.profile.current_cgpa ? data.profile.current_cgpa.toFixed(2) : "3.20");
+                setInnerText("ovTargetGpa", data.profile.target_gpa ? data.profile.target_gpa.toFixed(2) : "4.00");
+                setInnerText("topbarGpaTarget", data.profile.target_gpa ? data.profile.target_gpa.toFixed(2) : "4.00");
+            }
+            if (data.avg_attendance !== undefined) {
+                setInnerText("ovAvgAttendance", `${data.avg_attendance.toFixed(1)}%`);
+            }
+
+            // Portal status
+            if (portalStatusText && portalStatusBadge) {
+                if (data.portal_status === "OK") {
+                    portalStatusText.innerText = "Portal Connected";
+                    portalStatusBadge.style.color = "var(--success)";
+                } else {
+                    portalStatusText.innerText = "Check Warning: " + (data.portal_last_error || "Offline");
+                    portalStatusBadge.style.color = "var(--critical)";
+                }
+            }
+
+            if (data.portal_last_checked && lastCheckedText) {
+                const dt = new Date(data.portal_last_checked);
+                lastCheckedText.innerText = "Last checked: " + dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            }
+        } catch (e) {
+            console.warn("fetchOverview error:", e);
         }
     }
 
     async function fetchCourses() {
-        const res = await fetch("/api/courses");
-        allCourses = await res.json();
-        renderCoursesGrid();
-        populateCourseFilter();
+        try {
+            const res = await fetch("/api/courses");
+            allCourses = await res.json();
+            renderCoursesGrid();
+            populateCourseFilter();
+            populateCourseDropdown();
+        } catch (e) {
+            console.warn("fetchCourses error:", e);
+        }
     }
 
     async function fetchActivities() {
-        const res = await fetch("/api/activities");
-        allActivities = await res.json();
-        renderUrgentList();
-        renderTimeline();
-        renderActivitiesTable();
+        try {
+            const res = await fetch("/api/activities");
+            allActivities = await res.json();
+
+            // Update badge counters
+            const upcomingCount = allActivities.filter(a => a.deadline && a.remaining_hours !== null && a.remaining_hours <= 72).length;
+            setInnerText("navDeadlineCount", upcomingCount);
+
+            renderUrgentList();
+            renderTimeline();
+            renderActivitiesTable();
+            renderFypCommandCenter();
+        } catch (e) {
+            console.warn("fetchActivities error:", e);
+        }
     }
 
     async function fetchNotifications() {
-        const res = await fetch("/api/notifications");
-        const logs = await res.json();
-        renderNotifications(logs);
+        try {
+            const res = await fetch("/api/notifications");
+            const logs = await res.json();
+            renderNotifications(logs);
+        } catch (e) {
+            console.warn("fetchNotifications error:", e);
+        }
     }
 
     async function fetchSettings() {
-        const res = await fetch("/api/settings");
-        const settings = await res.json();
-        
-        if (settings.check_interval_minutes) {
-            document.getElementById("settingInterval").value = settings.check_interval_minutes;
-        }
-        if (settings.whatsapp_provider) {
-            document.getElementById("settingProvider").value = settings.whatsapp_provider;
-        }
-        if (settings.whatsapp_to_number) {
-            document.getElementById("settingPhone").value = settings.whatsapp_to_number;
-        }
-        if (settings.reminder_hours) {
-            document.getElementById("settingReminderHours").value = settings.reminder_hours.replace(/[\[\]]/g, '');
-        }
-        if (settings.daily_summary_time) {
-            document.getElementById("settingDailyTime").value = settings.daily_summary_time;
+        try {
+            const res = await fetch("/api/settings");
+            const settings = await res.json();
+            
+            setValueIfElem("settingInterval", settings.check_interval_minutes);
+            setValueIfElem("settingProvider", settings.whatsapp_provider);
+            setValueIfElem("settingPhone", settings.whatsapp_to_number);
+            if (settings.reminder_hours) {
+                setValueIfElem("settingReminderHours", settings.reminder_hours.replace(/[\[\]]/g, ''));
+            }
+            setValueIfElem("settingDailyTime", settings.daily_summary_time);
+        } catch (e) {
+            console.warn("fetchSettings error:", e);
         }
     }
 
     function renderUrgentList() {
         const container = document.getElementById("urgentDeadlinesList");
+        if (!container) return;
+
         const urgentItems = allActivities.filter(a => 
             a.deadline && 
             a.remaining_hours !== null && 
@@ -195,7 +286,7 @@ document.addEventListener("DOMContentLoaded", () => {
         );
 
         if (urgentItems.length === 0) {
-            container.innerHTML = `<p class="empty-state">No urgent deadlines within 72 hours! 🎉</p>`;
+            container.innerHTML = `<p class="empty-state">No urgent deadlines within 72 hours! 🎉 All tasks are on schedule.</p>`;
             return;
         }
 
@@ -216,7 +307,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function renderTimeline() {
         const container = document.getElementById("timelineContainer");
-        const courseFilter = document.getElementById("filterTimelineCourse").value;
+        if (!container) return;
+        const filterElem = document.getElementById("filterTimelineCourse");
+        const courseFilter = filterElem ? filterElem.value : "";
 
         let filtered = allActivities.filter(a => a.deadline);
         if (courseFilter) {
@@ -228,7 +321,6 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        // Sort by deadline ascending
         filtered.sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
 
         container.innerHTML = filtered.map(item => `
@@ -236,7 +328,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div class="timeline-info">
                     <h4>${escapeHtml(item.title)}</h4>
                     <div class="timeline-meta">
-                        <strong>${escapeHtml(item.course_name)}</strong> • [${escapeHtml(item.activity_type)}] • Status: ${escapeHtml(item.submission_status)}
+                        <strong>${escapeHtml(item.course_name)}</strong> • [${escapeHtml(item.activity_type)}] • Status: <span class="badge ${item.submission_status === 'Submitted' ? 'badge-success' : 'badge-high'}">${escapeHtml(item.submission_status)}</span>
                     </div>
                 </div>
                 <div class="timeline-deadline">
@@ -248,8 +340,102 @@ document.addEventListener("DOMContentLoaded", () => {
         `).join("");
     }
 
+    // ================================================================
+    //  DEDICATED FYP COMMAND CENTER RENDERING
+    // ================================================================
+
+    function renderFypCommandCenter() {
+        const container = document.getElementById("fypCardsGrid");
+        if (!container) return;
+
+        const fypActivities = allActivities.filter(a => a.is_fyp);
+        
+        // Update files count
+        const filesCount = fypActivities.filter(a => a.local_file_path || a.attachment_url).length;
+        setInnerText("fypFilesCount", `${filesCount} Files`);
+
+        let filtered = fypActivities;
+        if (currentFypFilter !== "all") {
+            filtered = fypActivities.filter(a => a.activity_type === currentFypFilter);
+        }
+
+        if (filtered.length === 0) {
+            container.innerHTML = `<p class="empty-state" style="grid-column: 1/-1;">No items found under filter '${currentFypFilter}'.</p>`;
+            return;
+        }
+
+        container.innerHTML = filtered.map(item => {
+            const hasLocalFile = Boolean(item.local_file_path);
+            const fileName = hasLocalFile ? item.local_file_path.split(/[\\/]/).pop() : item.attachment_name;
+            const ext = fileName && fileName.includes('.') ? fileName.split('.').pop().toUpperCase() : 'FILE';
+
+            let typeIcon = '📄';
+            if (ext === 'PDF') typeIcon = '📕';
+            else if (ext === 'DOCX' || ext === 'DOC') typeIcon = '📘';
+            else if (ext === 'XLSX' || ext === 'XLS') typeIcon = '📗';
+            else if (ext === 'PPTX' || ext === 'PPT') typeIcon = '📙';
+
+            return `
+            <div class="fyp-item-card ${hasLocalFile ? 'has-file' : ''}">
+                <div>
+                    <div class="fyp-item-header">
+                        <span class="fyp-item-type">${escapeHtml(item.activity_type)}</span>
+                        <span class="badge ${item.submission_status === 'Submitted' ? 'badge-success' : 'badge-subtle'}">
+                            ${escapeHtml(item.submission_status)}
+                        </span>
+                    </div>
+
+                    <div class="fyp-item-title">${escapeHtml(item.title)}</div>
+
+                    ${item.description ? `
+                        <div class="fyp-item-desc">${escapeHtml(item.description.substring(0, 150))}${item.description.length > 150 ? '...' : ''}</div>
+                    ` : ''}
+
+                    ${item.ai_summary ? `
+                        <div class="fyp-ai-brief-box">
+                            <strong>🤖 Gemini 3.8 Brief:</strong><br>${escapeHtml(item.ai_summary)}
+                        </div>
+                    ` : ''}
+                </div>
+
+                <div class="fyp-item-footer">
+                    <div>
+                        ${hasLocalFile ? `
+                            <span class="fyp-file-tag">${typeIcon} <strong>${escapeHtml(ext)}</strong> Ready Offline</span>
+                        ` : (item.deadline ? `
+                            <span style="font-size: 11px; color: var(--text-muted);">Due: ${formatDate(item.deadline)}</span>
+                        ` : `<span style="font-size: 11px; color: var(--text-muted);">Design Project Track</span>`)}
+                    </div>
+
+                    <div>
+                        ${hasLocalFile ? `
+                            <a href="/api/download-file?path=${encodeURIComponent(item.local_file_path)}" class="btn btn-gold btn-sm">
+                                💾 Download ${escapeHtml(ext)}
+                            </a>
+                        ` : (item.attachment_url ? `
+                            <a href="${escapeHtml(item.attachment_url)}" target="_blank" class="btn btn-outline btn-sm">
+                                📎 Portal File
+                            </a>
+                        ` : `
+                            <a href="${escapeHtml(item.portal_url)}" target="_blank" class="btn btn-outline btn-sm">
+                                🔗 Open Portal
+                            </a>
+                        `)}
+                    </div>
+                </div>
+            </div>
+            `;
+        }).join("");
+    }
+
+    // ================================================================
+    //  COURSES GRID RENDERING
+    // ================================================================
+
     function renderCoursesGrid() {
         const container = document.getElementById("coursesGrid");
+        if (!container) return;
+
         if (allCourses.length === 0) {
             container.innerHTML = `<p class="empty-state">No courses detected yet. Run a sync to discover enrolled subjects.</p>`;
             return;
@@ -257,35 +443,43 @@ document.addEventListener("DOMContentLoaded", () => {
 
         container.innerHTML = allCourses.map(c => {
             const att = (typeof c.attendance_pct === 'number') ? c.attendance_pct : 100.0;
-            const attClass = att < 75.0 ? 'badge-critical' : 'badge-low';
+            const attClass = att >= 85.0 ? 'safe' : (att >= 75.0 ? 'warning' : 'critical');
+            const attBadgeClass = att >= 85.0 ? 'badge-success' : (att >= 75.0 ? 'badge-high' : 'badge-critical');
             const isFyp = c.is_fyp || (c.name && c.name.toLowerCase().includes('design project'));
 
             return `
             <div class="course-card ${isFyp ? 'fyp-card' : ''}">
-                <div class="course-card-header">
-                    <div>
-                        <div class="course-title">
-                            ${isFyp ? '<span class="badge" style="background:#f59e0b; color:#fff; font-size:10px; margin-right:4px;">🎓 FYP</span>' : ''}
-                            ${escapeHtml(c.name)}
+                <div>
+                    <div class="course-card-header">
+                        <div>
+                            <div class="course-title">
+                                ${isFyp ? '<span class="badge badge-gold-glow" style="margin-right:6px; font-size:10px;">🎓 FYP</span>' : ''}
+                                ${escapeHtml(c.name)}
+                            </div>
+                            <div class="course-code">${escapeHtml(c.code || c.course_id)} ${c.instructor ? '• ' + escapeHtml(c.instructor) : ''}</div>
                         </div>
-                        <div class="course-code">${escapeHtml(c.code || c.course_id)} ${c.instructor ? '• ' + escapeHtml(c.instructor) : ''}</div>
-                    </div>
-                    <span class="badge ${c.pending_tasks > 0 ? 'badge-high' : 'badge-low'}">
-                        ${c.pending_tasks} Pending
-                    </span>
-                </div>
-                <div class="course-card-body">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 13px;">
-                        <span>📊 Attendance:</span>
-                        <span class="badge ${attClass}" style="font-weight: 600;">
-                            ${att.toFixed(1)}% ${att < 75.0 ? '⚠️' : '✅'}
+                        <span class="badge ${c.pending_tasks > 0 ? 'badge-high' : 'badge-low'}">
+                            ${c.pending_tasks} Pending
                         </span>
                     </div>
-                    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">
-                        Total Activities Tracked: <strong>${c.total_activities}</strong>
-                    </p>
+
+                    <div class="course-att-row">
+                        <div class="att-labels">
+                            <span style="color:var(--text-secondary); font-size:12px;">Attendance Status</span>
+                            <span class="badge ${attBadgeClass}" style="font-weight:700;">${att.toFixed(1)}%</span>
+                        </div>
+                        <div class="att-track">
+                            <div class="att-fill ${attClass}" style="width: ${Math.min(100, Math.max(0, att))}%;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="course-card-actions">
+                    <span style="font-size: 12px; color: var(--text-muted);">
+                        📋 <strong>${c.total_activities}</strong> items tracked
+                    </span>
                     <a href="${escapeHtml(c.url)}" target="_blank" class="btn btn-outline btn-sm">
-                        🔗 Open on ODOCUST
+                        🔗 Open on Portal
                     </a>
                 </div>
             </div>
@@ -295,15 +489,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function populateCourseFilter() {
         const select = document.getElementById("filterTimelineCourse");
+        if (!select) return;
         select.innerHTML = `<option value="">All Courses</option>` + 
             allCourses.map(c => `<option value="${c.course_id}">${escapeHtml(c.name)}</option>`).join("");
     }
 
+    // ================================================================
+    //  ACTIVITIES & DOCUMENT INTELLIGENCE TABLE
+    // ================================================================
+
     function renderActivitiesTable() {
         const tbody = document.getElementById("activitiesTableBody");
-        const query = document.getElementById("searchActivities").value.toLowerCase();
-        const typeFilter = document.getElementById("filterType").value;
-        const statusFilter = document.getElementById("filterStatus").value;
+        if (!tbody) return;
+
+        const searchInput = document.getElementById("searchActivities");
+        const query = searchInput ? searchInput.value.toLowerCase() : "";
+        const typeFilterElem = document.getElementById("filterType");
+        const typeFilter = typeFilterElem ? typeFilterElem.value : "";
+        const statusFilterElem = document.getElementById("filterStatus");
+        const statusFilter = statusFilterElem ? statusFilterElem.value : "";
 
         let filtered = allActivities.filter(a => {
             const matchesQuery = !query || 
@@ -324,24 +528,38 @@ document.addEventListener("DOMContentLoaded", () => {
 
         tbody.innerHTML = filtered.map(a => {
             const badgeClass = `badge-${a.priority.toLowerCase()}`;
+            const hasLocalFile = Boolean(a.local_file_path);
+            const hasAiBrief = Boolean(a.ai_summary);
+
             return `
                 <tr>
                     <td>
                         <span class="badge ${badgeClass}">${a.priority}</span>
-                        ${a.is_fyp ? '<div style="margin-top:4px;"><span class="badge" style="background:#f59e0b; color:#fff; font-size:10px;">🎓 FYP</span></div>' : ''}
+                        ${a.is_fyp ? '<div style="margin-top:4px;"><span class="badge badge-gold-glow" style="font-size:9px;">🎓 FYP</span></div>' : ''}
                     </td>
                     <td><strong>${escapeHtml(a.activity_type)}</strong></td>
-                    <td>${escapeHtml(a.course_name)}</td>
+                    <td><span style="font-weight:600;">${escapeHtml(a.course_name)}</span></td>
                     <td>
-                        <div style="font-weight: 600;">${escapeHtml(a.title)}</div>
+                        <div style="font-weight: 700; color: #fff;">${escapeHtml(a.title)}</div>
+                        
+                        <!-- Document Intelligence Pipeline Stepper -->
+                        <div class="doc-pipeline-bar">
+                            <span class="pipe-step done">🌐 Extracted</span>
+                            <span class="pipe-arrow">➔</span>
+                            <span class="pipe-step ${hasLocalFile ? 'done' : ''}">${hasLocalFile ? '📥 Downloaded' : '⏳ Remote File'}</span>
+                            <span class="pipe-arrow">➔</span>
+                            <span class="pipe-step ${hasAiBrief ? 'done' : ''}">${hasAiBrief ? '🧠 Gemini Brief' : 'AI Pending'}</span>
+                        </div>
+
                         ${a.ai_summary ? `
-                            <div style="margin-top: 6px; font-size: 12px; color: #c7d2fe; background: rgba(99,102,241,0.1); padding: 6px 10px; border-radius: 6px; border-left: 3px solid #818cf8; white-space: pre-line;">
-                                <strong>🤖 AI Brief:</strong> ${escapeHtml(a.ai_summary)}
+                            <div style="margin-top: 8px; font-size: 12px; color: #c7d2fe; background: rgba(99,102,241,0.08); padding: 8px 12px; border-radius: 6px; border-left: 3px solid #818cf8; white-space: pre-line; line-height: 1.45;">
+                                <strong>🤖 AI Executive Brief:</strong><br>${escapeHtml(a.ai_summary)}
                             </div>
                         ` : ''}
-                        <div style="margin-top: 6px; display: flex; gap: 8px; flex-wrap: wrap;">
-                            ${a.local_file_path ? `
-                                <a href="/api/download-file?path=${encodeURIComponent(a.local_file_path)}" class="btn btn-outline btn-sm" style="font-size: 11px; padding: 2px 8px; color: var(--success); border-color: var(--success);">
+
+                        <div style="margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                            ${hasLocalFile ? `
+                                <a href="/api/download-file?path=${encodeURIComponent(a.local_file_path)}" class="btn btn-outline btn-sm" style="font-size: 11px; padding: 3px 10px; color: #34d399; border-color: rgba(16,185,129,0.4);">
                                     💾 Download File
                                 </a>
                             ` : (a.attachment_url ? `
@@ -350,11 +568,11 @@ document.addEventListener("DOMContentLoaded", () => {
                         </div>
                     </td>
                     <td>
-                        <div>${formatDate(a.deadline)}</div>
+                        <div style="font-weight:600;">${formatDate(a.deadline)}</div>
                         <small style="color: var(--text-muted);">${escapeHtml(a.remaining_str)}</small>
                     </td>
                     <td>
-                        <span class="badge ${a.submission_status === 'Submitted' ? 'badge-low' : 'badge-high'}">
+                        <span class="badge ${a.submission_status === 'Submitted' ? 'badge-success' : 'badge-high'}">
                             ${escapeHtml(a.submission_status)}
                         </span>
                     </td>
@@ -373,29 +591,34 @@ document.addEventListener("DOMContentLoaded", () => {
         const recentContainer = document.getElementById("recentAlertsList");
 
         if (logs.length === 0) {
-            container.innerHTML = `<p class="empty-state">No notifications dispatched yet.</p>`;
-            recentContainer.innerHTML = `<p class="empty-state">No recent alerts.</p>`;
+            if (container) container.innerHTML = `<p class="empty-state">No notifications dispatched yet.</p>`;
+            if (recentContainer) recentContainer.innerHTML = `<p class="empty-state">No recent alerts recorded yet.</p>`;
             return;
         }
 
-        recentContainer.innerHTML = logs.slice(0, 4).map(l => `
-            <div class="notification-card">
-                <strong>[${escapeHtml(l.notification_type)}]</strong> • ${new Date(l.sent_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
-                    ${escapeHtml(l.message_text.substring(0, 100))}...
+        if (recentContainer) {
+            recentContainer.innerHTML = logs.slice(0, 4).map(l => `
+                <div class="notif-item">
+                    <div class="notif-header">
+                        <span class="notif-type">${escapeHtml(l.notification_type)}</span>
+                        <span class="notif-time">${new Date(l.sent_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                    </div>
+                    <div class="notif-msg">${escapeHtml(l.message_text.substring(0, 100))}...</div>
                 </div>
-            </div>
-        `).join("");
+            `).join("");
+        }
 
-        container.innerHTML = logs.map(l => `
-            <div class="card" style="margin-bottom: 12px; padding: 16px;">
-                <div style="display:flex; justify-content:space-between; margin-bottom: 8px;">
-                    <span class="badge badge-${l.priority.toLowerCase()}">${l.priority}</span>
-                    <span style="font-size: 12px; color: var(--text-muted);">${new Date(l.sent_at).toLocaleString()}</span>
+        if (container) {
+            container.innerHTML = logs.map(l => `
+                <div class="card" style="margin-bottom: 12px; padding: 16px;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom: 8px;">
+                        <span class="badge badge-${l.priority.toLowerCase()}">${l.priority}</span>
+                        <span style="font-size: 12px; color: var(--text-muted);">${new Date(l.sent_at).toLocaleString()}</span>
+                    </div>
+                    <div style="font-size: 13px; line-height: 1.5; white-space: pre-wrap;">${escapeHtml(l.message_text)}</div>
                 </div>
-                <div style="font-size: 13px; line-height: 1.5; white-space: pre-wrap;">${escapeHtml(l.message_text)}</div>
-            </div>
-        `).join("");
+            `).join("");
+        }
     }
 
     async function saveSettings(e) {
@@ -424,7 +647,7 @@ document.addEventListener("DOMContentLoaded", () => {
     async function sendTestWhatsApp() {
         const phone = document.getElementById("settingPhone").value;
         if (!phone) {
-            alert("Please enter a WhatsApp phone number first.");
+            alert("Please enter a contact phone number or handle first.");
             return;
         }
 
@@ -435,10 +658,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 body: JSON.stringify({ phone_number: phone })
             });
             const data = await res.json();
-            alert(data.message || "Test message initiated!");
+            alert(data.message || "Test alert dispatched!");
             fetchNotifications();
         } catch (err) {
-            alert("Test message error: " + err.message);
+            alert("Alert test error: " + err.message);
         }
     }
 
@@ -448,7 +671,10 @@ document.addEventListener("DOMContentLoaded", () => {
         return d.toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
     }
 
-    // --- AI COPILOT & GPA FUNCTIONS ---
+    // ================================================================
+    //  AI COPILOT & GPA FUNCTIONS
+    // ================================================================
+
     async function sendAiQuery(queryText) {
         const chatContainer = document.getElementById("aiChatMessages");
         if (!chatContainer) return;
@@ -477,7 +703,6 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             const data = await res.json();
             
-            // Format response (convert **bold** and newlines)
             let formatted = escapeHtml(data.response || "No response received.")
                 .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
                 .replace(/\*(.*?)\*/g, '<em>$1</em>')
@@ -493,8 +718,9 @@ document.addEventListener("DOMContentLoaded", () => {
     async function simulateGpa() {
         const curCgpa = parseFloat(document.getElementById("simCurrentCgpa").value) || 3.20;
         const credits = parseInt(document.getElementById("simCredits").value) || 100;
-        const targetGpa = parseFloat(document.getElementById("simTargetGpa").value) || 3.66;
+        const targetGpa = parseFloat(document.getElementById("simTargetGpa").value) || 4.00;
         const resultBox = document.getElementById("gpaResultBox");
+        if (!resultBox) return;
 
         resultBox.innerHTML = `<em>Simulating CUST degree progression...</em>`;
 
@@ -502,7 +728,6 @@ document.addEventListener("DOMContentLoaded", () => {
             const res = await fetch("/api/gpa/projection");
             const data = await res.json();
 
-            // Custom projection using user inputs
             const semCredits = 15;
             const newTotalQp = (curCgpa * credits) + (targetGpa * semCredits);
             const newCgpa = (newTotalQp / (credits + semCredits)).toFixed(2);
@@ -515,8 +740,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     (${diff >= 0 ? '+' : ''}${diff})
                 </div>
                 <div style="margin-bottom: 6px;">
-                    • Semester Target GPA: <strong>${targetGpa.toFixed(2)}</strong> (based on 15 credits)<br>
-                    • Absolute Mathematical Ceiling: <strong>${maxCgpa}</strong> (if you achieve straight A's)
+                    • Target Semester GPA: <strong>${targetGpa.toFixed(2)}</strong> (based on 15 credits)<br>
+                    • Absolute Mathematical Ceiling: <strong>${maxCgpa}</strong> (with straight A's)
                 </div>
                 ${data.advising && data.advising.length > 0 ? `
                     <div style="margin-top: 8px; font-size: 12px; color: #fde68a;">
@@ -536,6 +761,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const finalTotal = parseFloat(document.getElementById("calcFinalTotal").value) || 50;
         const targetGrade = document.getElementById("calcTargetGrade").value || "A";
         const resultBox = document.getElementById("calcResultBox");
+        if (!resultBox) return;
 
         resultBox.innerHTML = `<em>Calculating required exam score...</em>`;
 
@@ -566,16 +792,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    function escapeHtml(str) {
-        if (!str) return "";
-        return String(str)
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
-    }
-
     // ================================================================
     //  SESSIONAL MARGIN GUARD
     // ================================================================
@@ -595,22 +811,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function addMarkEntry() {
         const sel = document.getElementById("mgCourseSelect");
-        const course_id = sel.value;
-        const course_name = sel.options[sel.selectedIndex]?.dataset.name || course_id;
-        const component = document.getElementById("mgComponent").value.trim();
-        const component_type = document.getElementById("mgCompType").value;
-        const obtained = parseFloat(document.getElementById("mgObtained").value);
-        const total = parseFloat(document.getElementById("mgTotal").value);
+        const course_id = sel ? sel.value : "";
+        const course_name = sel && sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].dataset.name : course_id;
+        const componentElem = document.getElementById("mgComponent");
+        const component = componentElem ? componentElem.value.trim() : "";
+        const compTypeElem = document.getElementById("mgCompType");
+        const component_type = compTypeElem ? compTypeElem.value : "other";
+        const obtElem = document.getElementById("mgObtained");
+        const obtained = obtElem ? parseFloat(obtElem.value) : NaN;
+        const totElem = document.getElementById("mgTotal");
+        const total = totElem ? parseFloat(totElem.value) : NaN;
         const msg = document.getElementById("mgSaveMsg");
 
         if (!course_id || !component || isNaN(obtained) || isNaN(total) || total <= 0) {
-            msg.textContent = "⚠️ Fill in all fields correctly.";
-            msg.style.color = "#ef4444";
+            if (msg) { msg.textContent = "⚠️ Fill in all fields correctly."; msg.style.color = "#ef4444"; }
             return;
         }
         if (obtained > total) {
-            msg.textContent = "⚠️ Obtained cannot exceed total.";
-            msg.style.color = "#ef4444";
+            if (msg) { msg.textContent = "⚠️ Obtained cannot exceed total."; msg.style.color = "#ef4444"; }
             return;
         }
 
@@ -621,25 +839,26 @@ document.addEventListener("DOMContentLoaded", () => {
                 body: JSON.stringify({course_id, course_name, component, component_type, obtained, total})
             });
             const data = await res.json();
-            msg.textContent = "✅ Saved!";
-            msg.style.color = "#4ade80";
-            setTimeout(() => { msg.textContent = ""; }, 3000);
+            if (msg) {
+                msg.textContent = "✅ Saved!";
+                msg.style.color = "#34d399";
+                setTimeout(() => { msg.textContent = ""; }, 3000);
+            }
             loadMarginReport();
         } catch (e) {
-            msg.textContent = "❌ Save failed.";
-            msg.style.color = "#ef4444";
+            if (msg) { msg.textContent = "❌ Save failed."; msg.style.color = "#ef4444"; }
         }
     }
 
     async function loadMarginReport() {
         const container = document.getElementById("mgReportContainer");
         if (!container) return;
-        container.innerHTML = "<p class='empty-state'>Loading...</p>";
+        container.innerHTML = "<p class='empty-state'>Loading buffer report...</p>";
 
         try {
             const data = await fetch("/api/margin/report").then(r => r.json());
             if (!data.courses || data.courses.length === 0) {
-                container.innerHTML = "<p class='empty-state'>No marks logged yet. Add component marks above to start tracking.</p>";
+                container.innerHTML = "<p class='empty-state'>No marks logged yet. Log component scores above to calculate your 15-mark buffer.</p>";
                 return;
             }
 
@@ -649,9 +868,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 const components = (course.components || []).map(c =>
                     `<tr>
                         <td>${escapeHtml(c.component)}</td>
-                        <td><span class="type-badge">${escapeHtml(c.component_type)}</span></td>
+                        <td><span class="badge badge-subtle">${escapeHtml(c.component_type)}</span></td>
                         <td>${c.obtained} / ${c.total}</td>
-                        <td>${c.pct}%</td>
+                        <td><strong>${c.pct}%</strong></td>
                     </tr>`
                 ).join("");
 
@@ -666,12 +885,12 @@ document.addEventListener("DOMContentLoaded", () => {
                     </div>
                     <div class="mg-stats">
                         <span>Obtained: <strong>${course.obtained_total} / ${course.possible_total}</strong></span>
-                        <span>Current %: <strong>${course.current_pct}%</strong></span>
-                        <span>Buffer until A drops: <strong>${course.marks_buffer} marks</strong></span>
-                        <span>Need for A (60mk sessional): <strong>${course.marks_needed_for_A}</strong></span>
+                        <span>Current Sessional %: <strong>${course.current_pct}%</strong></span>
+                        <span>Buffer until Grade A drops: <strong>${course.marks_buffer} marks</strong></span>
+                        <span>Sessional Target: <strong>${course.marks_needed_for_A}</strong></span>
                     </div>
                     <p style="font-size:13px; color:var(--text-secondary); margin-top:8px;">${escapeHtml(course.message)}</p>
-                    ${components ? `<table class="mg-components-table"><thead><tr><th>Component</th><th>Type</th><th>Marks</th><th>%</th></tr></thead><tbody>${components}</tbody></table>` : ""}
+                    ${components ? `<table class="mg-components-table"><thead><tr><th>Component</th><th>Type</th><th>Score</th><th>%</th></tr></thead><tbody>${components}</tbody></table>` : ""}
                 </div>`;
             }).join("");
         } catch (e) {
@@ -697,8 +916,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const resultCard = document.getElementById("raResultCard");
         const resultContent = document.getElementById("raResultContent");
-        resultCard.style.display = "block";
-        resultContent.innerHTML = "<p>🔄 Running AI Rubric Audit...</p>";
+        if (resultCard) resultCard.style.display = "block";
+        if (resultContent) resultContent.innerHTML = "<p>🔄 Running Gemini AI Rubric Audit...</p>";
 
         try {
             const data = await fetch("/api/rubric/audit", {
@@ -709,20 +928,20 @@ document.addEventListener("DOMContentLoaded", () => {
             renderAuditResult(resultContent, data);
             loadAuditHistory();
         } catch (e) {
-            resultContent.innerHTML = `<p class="empty-state">❌ Audit failed: ${escapeHtml(e.message)}</p>`;
+            if (resultContent) resultContent.innerHTML = `<p class="empty-state">❌ Audit failed: ${escapeHtml(e.message)}</p>`;
         }
     }
 
     async function scanSubmissionsFolder() {
         const resultCard = document.getElementById("raResultCard");
         const resultContent = document.getElementById("raResultContent");
-        resultCard.style.display = "block";
-        resultContent.innerHTML = "<p>📂 Scanning submissions/ folder...</p>";
+        if (resultCard) resultCard.style.display = "block";
+        if (resultContent) resultContent.innerHTML = "<p>📂 Scanning submissions/ folder for drafts...</p>";
 
         try {
             const data = await fetch("/api/rubric/scan-submissions").then(r => r.json());
             if (data.count === 0) {
-                resultContent.innerHTML = "<p class='empty-state'>No draft files found in <code>submissions/</code>. Drop a file there first.</p>";
+                resultContent.innerHTML = "<p class='empty-state'>No draft files found in <code>submissions/</code> folder. Drop a .pdf or .docx draft there first.</p>";
                 return;
             }
             let html = `<p style="margin-bottom:12px;"><strong>${data.count} draft(s) audited:</strong></p>`;
@@ -735,36 +954,37 @@ document.addEventListener("DOMContentLoaded", () => {
             resultContent.innerHTML = html;
             loadAuditHistory();
         } catch (e) {
-            resultContent.innerHTML = `<p class="empty-state">❌ Scan failed: ${escapeHtml(e.message)}</p>`;
+            if (resultContent) resultContent.innerHTML = `<p class="empty-state">❌ Scan failed: ${escapeHtml(e.message)}</p>`;
         }
     }
 
     function renderAuditResult(container, data) {
+        if (!container) return;
         const score = data.coverage_score || 0;
         const scoreClass = score >= 80 ? "high" : score >= 50 ? "medium" : "low";
         const missing = (data.missing_items || []);
         const fmt = (data.formatting_issues || []);
 
         const missingHtml = missing.length
-            ? `<h4 style="margin:12px 0 6px;">❌ Missing Rubric Items (${missing.length})</h4>
-               <ul class="ra-checklist">${missing.map(m => `<li><span class="check-icon">❌</span>${escapeHtml(m)}</li>`).join("")}</ul>`
-            : `<p style="color:#4ade80; margin:8px 0;">✅ All rubric items appear to be addressed!</p>`;
+            ? `<h4 style="margin:14px 0 6px; font-size:14px;">❌ Missing Rubric Requirements (${missing.length})</h4>
+               <ul class="ra-checklist">${missing.map(m => `<li><span>❌</span>${escapeHtml(m)}</li>`).join("")}</ul>`
+            : `<p style="color:#34d399; margin:10px 0;">✅ All core rubric requirements are addressed!</p>`;
 
         const fmtHtml = fmt.length
-            ? `<h4 style="margin:12px 0 6px;">⚠️ Formatting Issues (${fmt.length})</h4>
-               <ul class="ra-checklist">${fmt.map(f => `<li><span class="check-icon">⚠️</span>${escapeHtml(f)}</li>`).join("")}</ul>`
+            ? `<h4 style="margin:14px 0 6px; font-size:14px;">⚠️ Formatting / Structure Recommendations (${fmt.length})</h4>
+               <ul class="ra-checklist">${fmt.map(f => `<li><span>⚠️</span>${escapeHtml(f)}</li>`).join("")}</ul>`
             : "";
 
         container.innerHTML = `
             <div class="ra-score-row">
                 <div class="ra-score-circle ${scoreClass}">${score}</div>
                 <div>
-                    <strong style="font-size:15px;">Coverage Score: ${score}/100</strong>
-                    <p style="margin:4px 0; font-size:13px; color:var(--text-secondary);">
+                    <strong style="font-size:16px;">Coverage Score: ${score} / 100</strong>
+                    <p style="margin:4px 0; font-size:12px; color:var(--text-secondary);">
                         File: <code>${escapeHtml(data.draft_file)}</code> &nbsp;·&nbsp;
-                        Method: <span class="ra-method-badge">${escapeHtml(data.method)}</span>
+                        Engine: <span class="ra-method-badge">${escapeHtml(data.method)}</span>
                     </p>
-                    <p style="margin:4px 0; font-size:13px; color:var(--text-secondary);">${escapeHtml(data.audit_result)}</p>
+                    <p style="margin:6px 0; font-size:13px; color:var(--text-secondary); line-height:1.45;">${escapeHtml(data.audit_result)}</p>
                 </div>
             </div>
             ${missingHtml}
@@ -778,19 +998,19 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             const audits = await fetch("/api/rubric/history?limit=15").then(r => r.json());
             if (!audits.length) {
-                container.innerHTML = "<p class='empty-state'>No audits yet.</p>";
+                container.innerHTML = "<p class='empty-state'>No previous audits recorded.</p>";
                 return;
             }
             container.innerHTML = audits.map(a => {
                 const score = a.coverage_score;
-                const color = score >= 80 ? "#4ade80" : score >= 50 ? "#facc15" : "#ef4444";
+                const color = score >= 80 ? "#34d399" : score >= 50 ? "#fbbf24" : "#f87171";
                 const missing = (a.missing_items || []).length;
                 return `<div class="ra-history-row">
                     <span class="ra-history-score" style="color:${color};">${score}</span>
                     <div>
                         <strong>${escapeHtml(a.draft_file)}</strong>
                         ${a.course_name ? `<span style="font-size:11px; color:var(--text-muted);"> · ${escapeHtml(a.course_name)}</span>` : ""}
-                        <br><span style="font-size:12px; color:var(--text-secondary);">${escapeHtml(a.audit_result?.slice(0, 120))}...</span>
+                        <br><span style="font-size:12px; color:var(--text-secondary);">${escapeHtml(a.audit_result?.slice(0, 110))}...</span>
                     </div>
                     <span class="ra-method-badge">${escapeHtml(a.method)}</span>
                     <span style="font-size:11px; color:var(--text-muted); white-space:nowrap;">
@@ -803,27 +1023,32 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // ================================================================
-    //  WIRE: Load data on tab switch for new panes
-    // ================================================================
-    const _originalSetupNavigation = setupNavigation;
-    navItems.forEach(item => {
-        item.addEventListener("click", () => {
-            const tab = item.getAttribute("data-tab");
-            if (tab === "margin-guard") {
-                populateCourseDropdown();
-                loadMarginReport();
-            } else if (tab === "rubric-auditor") {
-                loadAuditHistory();
-            }
-        });
-    });
+    // Helper functions
+    function setInnerText(elemId, text) {
+        const el = document.getElementById(elemId);
+        if (el) el.innerText = text;
+    }
 
-    // Expose to HTML onclick= attributes (outside DOMContentLoaded closure)
+    function setValueIfElem(elemId, val) {
+        const el = document.getElementById(elemId);
+        if (el && val !== undefined) el.value = val;
+    }
+
+    function escapeHtml(str) {
+        if (!str) return "";
+        return String(str)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    // Window-level exports for onclick handlers in HTML
+    window.switchTab = activateTab;
     window.addMarkEntry = addMarkEntry;
     window.loadMarginReport = loadMarginReport;
     window.runRubricAudit = runRubricAudit;
     window.scanSubmissionsFolder = scanSubmissionsFolder;
     window.loadAuditHistory = loadAuditHistory;
 });
-

@@ -26,10 +26,27 @@ def create_dashboard_app(database: Database, monitor_agent=None) -> FastAPI:
 
     @app.get("/api/overview")
     async def get_overview():
+        import config
         summary = database.get_dashboard_summary()
         summary["portal_status"] = database.get_setting("portal_status", "OK")
         summary["portal_last_checked"] = database.get_setting("portal_last_checked", "")
         summary["portal_last_error"] = database.get_setting("portal_last_error", "")
+
+        profile = database.get_student_profile()
+        courses = database.get_all_courses()
+        avg_att = round(sum(c.attendance_pct for c in courses) / len(courses), 1) if courses else 100.0
+        all_acts = database.get_all_activities()
+        fyp_acts = [a for a in all_acts if a.is_fyp]
+
+        summary["profile"] = {
+            "student_id": "BSE233195",
+            "current_cgpa": float(profile.get("current_cgpa", getattr(config, "STUDENT_CURRENT_CGPA", 3.20))),
+            "completed_credits": int(profile.get("completed_credits", getattr(config, "STUDENT_COMPLETED_CREDITS", 100))),
+            "target_gpa": float(profile.get("target_gpa", getattr(config, "STUDENT_TARGET_GPA", 3.50)))
+        }
+        summary["avg_attendance"] = avg_att
+        summary["fyp_activities_count"] = len(fyp_acts)
+        summary["fyp_pending_count"] = sum(1 for a in fyp_acts if a.submission_status not in (SubmissionStatus.SUBMITTED, SubmissionStatus.GRADED) and a.activity_type in (ActivityType.ASSIGNMENT, ActivityType.PROJECT))
         return summary
 
     @app.get("/api/courses")
