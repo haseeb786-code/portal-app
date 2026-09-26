@@ -368,7 +368,7 @@ class TestAcademicMonitor(unittest.TestCase):
         marks_after = self.db.get_course_marks("c1")
         self.assertEqual(len(marks_after), 1)
 
-        print("✅ test_sessional_margin_guard PASSED")
+        print("[PASS] test_sessional_margin_guard PASSED")
 
     def test_pre_submission_rubric_auditor(self):
         """Test RubricAuditor heuristic mode (no API key needed)."""
@@ -427,7 +427,7 @@ class TestAcademicMonitor(unittest.TestCase):
             self.assertGreater(len(audits), 0)
             self.assertIsInstance(audits[0]["missing_items"], list)
 
-            print("✅ test_pre_submission_rubric_auditor PASSED")
+            print("[PASS] test_pre_submission_rubric_auditor PASSED")
         finally:
             if os.path.exists(draft_path):
                 os.remove(draft_path)

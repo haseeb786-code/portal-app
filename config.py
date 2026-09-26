@@ -9,6 +9,7 @@ load_dotenv(BASE_DIR / ".env")
 # ODOCUST Portal Configuration
 ODOCUST_BASE_URL = os.getenv("ODOCUST_BASE_URL", "https://odoo.cust.edu.pk").rstrip("/")
 ODOCUST_USERNAME = os.getenv("ODOCUST_USERNAME", "")
+ODOCUST_EMAIL = os.getenv("ODOCUST_EMAIL", f"{ODOCUST_USERNAME}@cust.pk")
 ODOCUST_PASSWORD = os.getenv("ODOCUST_PASSWORD", "")
 ODOCUST_SESSION_ID = os.getenv("ODOCUST_SESSION_ID", "")  # Optional direct cookie
 

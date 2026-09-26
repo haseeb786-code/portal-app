@@ -4,6 +4,18 @@ import time
 import time
 import sys
 
+# If running under pythonw.exe, sys.stdout and sys.stderr are None. Redirect them to log file.
+if sys.stdout is None:
+    try:
+        sys.stdout = open("odocust_agent.log", "a", encoding="utf-8")
+    except Exception:
+        pass
+if sys.stderr is None:
+    try:
+        sys.stderr = open("odocust_agent.log", "a", encoding="utf-8")
+    except Exception:
+        pass
+
 # Ensure UTF-8 stdout/stderr on Windows
 if hasattr(sys.stdout, "reconfigure"):
     try:
@@ -26,14 +38,15 @@ from notifier.whatsapp import get_whatsapp_notifier
 from engine.monitor import AcademicMonitorAgent
 from dashboard.app import create_dashboard_app
 
-# Configure logging
+# Configure logging (safely handles pythonw.exe where sys.stdout is None)
+handlers = [logging.FileHandler("odocust_agent.log", encoding="utf-8")]
+if sys.stdout is not None:
+    handlers.append(logging.StreamHandler(sys.stdout))
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    handlers=[
-        logging.StreamHandler(sys.stdout),
-        logging.FileHandler("odocust_agent.log", encoding="utf-8")
-    ]
+    handlers=handlers
 )
 logger = logging.getLogger("odocust.main")
 
@@ -68,6 +81,23 @@ def run_scheduler_loop(monitor_agent: AcademicMonitorAgent, database: Database):
         except Exception as e:
             logger.error(f"Error in scheduled monitoring cycle: {e}")
 
+def run_heartbeat_loop(auth: OdoCustAuth):
+    """
+    Sends a lightweight keep-alive ping every 20 minutes to keep portal session permanently alive.
+    """
+    logger.info("Session keep-alive heartbeat active (20-minute intervals).")
+    while True:
+        time.sleep(1200)  # 20 minutes
+        try:
+            ok = auth.keep_alive_ping()
+            if ok:
+                logger.debug("Session heartbeat ping OK: Portal session active.")
+            else:
+                logger.info("Session heartbeat detected expired session. Auto-refreshing via Microsoft SSO...")
+                auth.get_authenticated_session()
+        except Exception as e:
+            logger.debug(f"Session heartbeat error: {e}")
+
 def main():
     logger.info("Initializing ODOCUST Academic Monitoring Agent...")
 
@@ -80,6 +110,7 @@ def main():
         base_url=config.ODOCUST_BASE_URL,
         username=config.ODOCUST_USERNAME,
         password=config.ODOCUST_PASSWORD,
+        email=config.ODOCUST_EMAIL,
         session_id=config.ODOCUST_SESSION_ID
     )
 
@@ -121,6 +152,15 @@ def main():
         name="OdoCustWorkerThread"
     )
     worker_thread.start()
+
+    # 7. Start Session Keep-Alive Heartbeat Thread
+    heartbeat_thread = threading.Thread(
+        target=run_heartbeat_loop,
+        args=(auth,),
+        daemon=True,
+        name="SessionHeartbeatThread"
+    )
+    heartbeat_thread.start()
 
     # 7. Start Dashboard Web Application
     app = create_dashboard_app(database=database, monitor_agent=monitor_agent)

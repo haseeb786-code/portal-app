@@ -9,6 +9,8 @@ import urllib3
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+from core.auto_auth import AutoLoginManager
+
 logger = logging.getLogger("odocust.auth")
 
 class AuthenticationError(Exception):
@@ -20,12 +22,14 @@ class OdoCustAuth:
         base_url: str,
         username: str = "",
         password: str = "",
+        email: str = "",
         session_id: str = "",
         session_cache_file: str = ".session_cache.json"
     ):
         self.base_url = base_url.rstrip("/")
         self.username = username
         self.password = password
+        self.email = email or (f"{username}@cust.pk" if username else "")
         self.manual_session_id = session_id
         self.cache_file = Path(session_cache_file)
         self.session = requests.Session()
@@ -55,7 +59,26 @@ class OdoCustAuth:
             else:
                 logger.warning("Provided manual session_id is expired or invalid.")
 
-        # Attempt login via credentials
+        # 1. Attempt automated Microsoft SSO login (Zero-touch)
+        email = self.email or f"{self.username}@cust.pk"
+        if email and self.password:
+            logger.info(f"Triggering automated Microsoft SSO login for {email}...")
+            try:
+                auto_mgr = AutoLoginManager(self.base_url)
+                new_session_id = auto_mgr.perform_microsoft_login(email, self.password, headless=True)
+                if new_session_id:
+                    self.manual_session_id = new_session_id
+                    for dom in ["tasjeel.cust.edu.pk", "odoo.cust.edu.pk"]:
+                        self.session.cookies.set("session_id", new_session_id, domain=dom)
+                    if self.is_session_valid():
+                        logger.info("Automated Microsoft SSO login succeeded! Session refreshed.")
+                        self._save_session_cache()
+                        self._update_env_session_id(new_session_id)
+                        return self.session
+            except Exception as e:
+                logger.warning(f"Automated Microsoft SSO attempt failed: {e}")
+
+        # 2. Fallback to Odoo standard credential login
         if self.username and self.password:
             self._login_with_credentials()
             if self.is_session_valid():
@@ -66,6 +89,27 @@ class OdoCustAuth:
                 raise AuthenticationError(f"Login failed for user '{self.username}'. Credentials rejected by ODOCUST.")
 
         raise AuthenticationError("No valid session or credentials provided. Please set ODOCUST_USERNAME & ODOCUST_PASSWORD or ODOCUST_SESSION_ID.")
+
+    def keep_alive_ping(self) -> bool:
+        """
+        Sends a lightweight request to the portal to refresh the idle session timeout.
+        """
+        try:
+            res = self.session.get(f"{self.base_url}/student/dashboard", timeout=12, verify=False, allow_redirects=False)
+            return res.status_code == 200
+        except Exception:
+            return False
+
+    def _update_env_session_id(self, new_session_id: str):
+        try:
+            env_path = Path(".env")
+            if env_path.exists():
+                content = env_path.read_text(encoding="utf-8")
+                updated = re.sub(r'ODOCUST_SESSION_ID=.*', f'ODOCUST_SESSION_ID={new_session_id}', content)
+                env_path.write_text(updated, encoding="utf-8")
+                logger.info("Updated .env with fresh ODOCUST_SESSION_ID.")
+        except Exception as e:
+            logger.warning(f"Could not update .env file: {e}")
 
     def is_session_valid(self) -> bool:
         """
