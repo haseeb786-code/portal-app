@@ -1,4 +1,5 @@
 import os
+import json
 from pathlib import Path
 from typing import Dict, Any, Optional
 from fastapi import FastAPI, BackgroundTasks, HTTPException
@@ -38,16 +39,42 @@ def create_dashboard_app(database: Database, monitor_agent=None) -> FastAPI:
         all_acts = database.get_all_activities()
         fyp_acts = [a for a in all_acts if a.is_fyp]
 
+        transcript_raw = profile.get("academic_transcript", "[]")
+        try:
+            terms_data = json.loads(transcript_raw)
+        except Exception:
+            terms_data = []
+
         summary["profile"] = {
             "student_id": "BSE233195",
-            "current_cgpa": float(profile.get("current_cgpa", getattr(config, "STUDENT_CURRENT_CGPA", 2.50))),
-            "completed_credits": int(profile.get("completed_credits", getattr(config, "STUDENT_COMPLETED_CREDITS", 100))),
-            "target_gpa": float(profile.get("target_gpa", getattr(config, "STUDENT_TARGET_GPA", 4.00)))
+            "current_cgpa": float(profile.get("current_cgpa", getattr(config, "STUDENT_CURRENT_CGPA", 2.53))),
+            "completed_credits": int(round(float(profile.get("completed_credits", getattr(config, "STUDENT_COMPLETED_CREDITS", 104))))),
+            "target_gpa": float(profile.get("target_gpa", getattr(config, "STUDENT_TARGET_GPA", 4.00))),
+            "latest_sgpa": float(profile.get("latest_sgpa", 4.0)),
+            "latest_term": profile.get("latest_term", "Summer 2026"),
+            "terms": terms_data
         }
         summary["avg_attendance"] = avg_att
         summary["fyp_activities_count"] = len(fyp_acts)
         summary["fyp_pending_count"] = sum(1 for a in fyp_acts if a.submission_status not in (SubmissionStatus.SUBMITTED, SubmissionStatus.GRADED) and a.activity_type in (ActivityType.ASSIGNMENT, ActivityType.PROJECT))
         return summary
+
+    @app.get("/api/transcript")
+    async def get_transcript():
+        profile = database.get_student_profile()
+        transcript_raw = profile.get("academic_transcript", "[]")
+        try:
+            terms = json.loads(transcript_raw)
+        except Exception:
+            terms = []
+        return {
+            "student_id": "BSE233195",
+            "current_cgpa": float(profile.get("current_cgpa", 2.53)),
+            "completed_credits": int(round(float(profile.get("completed_credits", 104)))),
+            "latest_sgpa": float(profile.get("latest_sgpa", 4.0)),
+            "latest_term": profile.get("latest_term", "Summer 2026"),
+            "terms": terms
+        }
 
     @app.get("/api/courses")
     async def get_courses():

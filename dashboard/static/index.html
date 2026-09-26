@@ -162,13 +162,18 @@
                             <div class="banner-metrics">
                                 <div class="banner-metric-box">
                                     <span class="b-metric-label">Current CGPA</span>
-                                    <span class="b-metric-val" id="ovCurrentCgpa">2.50</span>
-                                    <span class="b-metric-sub">100 Credit Hours</span>
+                                    <span class="b-metric-val" id="ovCurrentCgpa">2.53</span>
+                                    <span class="b-metric-sub" id="ovCreditHours">104 Credit Hours</span>
                                 </div>
                                 <div class="banner-metric-box highlight">
                                     <span class="b-metric-label">Semester Goal</span>
                                     <span class="b-metric-val" id="ovTargetGpa">4.00</span>
                                     <span class="b-metric-sub text-success">Target CGPA: 3.50+</span>
+                                </div>
+                                <div class="banner-metric-box">
+                                    <span class="b-metric-label">Latest SGPA</span>
+                                    <span class="b-metric-val text-gold" id="ovLatestSgpa">4.00</span>
+                                    <span class="b-metric-sub" id="ovLatestTerm">Summer 2026</span>
                                 </div>
                                 <div class="banner-metric-box">
                                     <span class="b-metric-label">Avg Attendance</span>
@@ -431,11 +436,11 @@
                                 <div class="form-row">
                                     <div class="form-group col">
                                         <label>Current CGPA</label>
-                                        <input type="number" step="0.01" id="simCurrentCgpa" class="form-control" value="2.50">
+                                        <input type="number" step="0.01" id="simCurrentCgpa" class="form-control" value="2.53">
                                     </div>
                                     <div class="form-group col">
                                         <label>Completed Credits</label>
-                                        <input type="number" id="simCredits" class="form-control" value="100">
+                                        <input type="number" id="simCredits" class="form-control" value="104">
                                     </div>
                                 </div>
                                 <div class="form-row">
@@ -486,6 +491,41 @@
                                 </div>
                                 <button class="btn btn-outline btn-block" id="btnCalcFinal">Calculate Needed Final Marks</button>
                                 <div class="calc-result-box" id="calcResultBox"></div>
+                            </div>
+                        </div>
+
+                        <!-- Official Academic Transcript History (Live Portal Record) -->
+                        <div class="card transcript-card" style="grid-column: 1 / -1; margin-top: 10px;">
+                            <div class="card-header">
+                                <div class="card-header-left">
+                                    <span class="card-icon">📜</span>
+                                    <div>
+                                        <h3>Official Academic Transcript History (Live Portal Record)</h3>
+                                        <p class="card-subtitle">Verified semester-by-semester SGPA, CGPA, and earned credit hours from CUST ODOCUST</p>
+                                    </div>
+                                </div>
+                                <span class="badge badge-portal-live">
+                                    <span class="live-dot"></span> Live Portal Verified
+                                </span>
+                            </div>
+                            <div class="table-responsive" style="overflow-x: auto; margin-top: 12px;">
+                                <table class="table" style="width: 100%; border-collapse: collapse;">
+                                    <thead>
+                                        <tr style="border-bottom: 1px solid var(--border); text-align: left; font-size: 12px; color: var(--text-muted); text-transform: uppercase;">
+                                            <th style="padding: 10px 14px;">Semester Term</th>
+                                            <th style="padding: 10px 14px; text-align: right;">Attempted CH</th>
+                                            <th style="padding: 10px 14px; text-align: right;">Earned CH</th>
+                                            <th style="padding: 10px 14px; text-align: right;">Cumulative CH</th>
+                                            <th style="padding: 10px 14px; text-align: right;">Term SGPA</th>
+                                            <th style="padding: 10px 14px; text-align: right;">Cumulative CGPA</th>
+                                            <th style="padding: 10px 14px; text-align: center;">Courses Taken</th>
+                                            <th style="padding: 10px 14px; text-align: center;">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="transcriptTableBody">
+                                        <tr><td colspan="8" style="text-align: center; padding: 24px; color: var(--text-muted);">Syncing official transcript from portal...</td></tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>

@@ -43,7 +43,7 @@ class RubricAuditor:
             try:
                 from google import genai
                 self.client = genai.Client(api_key=self.api_key)
-                logger.info("✅ Gemini Client initialized for Rubric Auditor.")
+                logger.info("[OK] Gemini Client initialized for Rubric Auditor.")
             except Exception as e:
                 logger.warning(f"GenAI client error: {e}. Will use heuristic auditor.")
 

@@ -501,3 +501,68 @@ class OdoCustExtractor:
                 last_checked_at=datetime.now()
             ))
         return activities
+
+    # --- ACADEMIC RESULTS & CGPA EXTRACTOR ---
+    def parse_academic_results(self, html_content: str) -> Dict[str, Any]:
+        """
+        Parses semester-by-semester results and official cumulative GPA from /student/results.
+        Returns a dict with:
+        - current_cgpa: float
+        - latest_sgpa: float
+        - completed_credits: int
+        - latest_term: str
+        - terms: List[Dict[str, Any]] (All historical semesters with courses, GPAs, and credits)
+        """
+        soup = BeautifulSoup(html_content, "html.parser")
+        tables = soup.find_all("table")
+        if not tables:
+            return {}
+
+        table = tables[0]
+        rows = table.find_all("tr")
+
+        terms = []
+        current_term = None
+
+        for r in rows:
+            tds = [td.get_text(strip=True) for td in r.find_all(["th", "td"])]
+            if not tds:
+                continue
+            if len(tds) == 8 and tds[0] != "Term":
+                try:
+                    current_term = {
+                        "term": tds[0],
+                        "grade_points": float(tds[1]),
+                        "cumulative_gp": float(tds[2]),
+                        "attempted_ch": float(tds[3]),
+                        "earned_ch": float(tds[4]),
+                        "cumulative_ch": float(tds[5]),
+                        "sgpa": float(tds[6]),
+                        "cgpa": float(tds[7]),
+                        "courses": []
+                    }
+                    terms.append(current_term)
+                except Exception:
+                    continue
+            elif len(tds) == 4 and tds[0] != "Course" and current_term:
+                try:
+                    current_term["courses"].append({
+                        "course": tds[0],
+                        "credit_hours": float(tds[1]) if tds[1] else 0.0,
+                        "grade_points": float(tds[2]) if tds[2] else 0.0,
+                        "grade": tds[3]
+                    })
+                except Exception:
+                    pass
+
+        if not terms:
+            return {}
+
+        latest = terms[-1]
+        return {
+            "current_cgpa": float(latest["cgpa"]),
+            "latest_sgpa": float(latest["sgpa"]),
+            "completed_credits": int(round(latest["cumulative_ch"])),
+            "latest_term": str(latest["term"]),
+            "terms": terms
+        }

@@ -432,6 +432,30 @@ class TestAcademicMonitor(unittest.TestCase):
             if os.path.exists(draft_path):
                 os.remove(draft_path)
 
+    def test_academic_results_extractor(self):
+        """Test extraction of official semester results and CGPA from portal HTML."""
+        sample_results_html = """
+        <table>
+            <tr><th>Term</th><th>Grade Points</th><th>Cumulative GP</th><th>Attempted CH</th><th>Earned CH</th><th>Cumulative CH</th><th>SGPA</th><th>CGPA</th></tr>
+            <tr><td>Fall 2023</td><td>41.99</td><td>41.99</td><td>15.0</td><td>15.0</td><td>15.0</td><td>2.8</td><td>2.8</td></tr>
+            <tr><td>Course</td><td>Credit Hours</td><td>Grade Pts</td><td>Final Grade</td></tr>
+            <tr><td>Applied Physics</td><td>3.0</td><td>6.0</td><td>C</td></tr>
+            <tr><td>Spring 2024</td><td>54.03</td><td>96.02</td><td>18.0</td><td>18.0</td><td>33.0</td><td>3.0</td><td>2.91</td></tr>
+            <tr><td>Summer 2026</td><td>12.00</td><td>262.99</td><td>3.0</td><td>3.0</td><td>104.0</td><td>4.0</td><td>2.53</td></tr>
+            <tr><td>Human Computer Interaction</td><td>3.0</td><td>12.0</td><td>A</td></tr>
+        </table>
+        """
+        extracted = self.extractor.parse_academic_results(sample_results_html)
+        self.assertIn("current_cgpa", extracted)
+        self.assertEqual(extracted["current_cgpa"], 2.53)
+        self.assertEqual(extracted["latest_sgpa"], 4.0)
+        self.assertEqual(extracted["completed_credits"], 104)
+        self.assertEqual(extracted["latest_term"], "Summer 2026")
+        self.assertEqual(len(extracted["terms"]), 3)
+        self.assertEqual(len(extracted["terms"][0]["courses"]), 1)
+        self.assertEqual(extracted["terms"][0]["courses"][0]["grade"], "C")
+        print("[PASS] test_academic_results_extractor PASSED")
+
 if __name__ == "__main__":
     unittest.main()
 

@@ -1,6 +1,7 @@
 import os
 import logging
 import time
+import json
 from datetime import datetime, date
 from typing import Optional, List, Dict, Any
 
@@ -127,6 +128,29 @@ class AcademicMonitorAgent:
 
         cycle_stats["courses_found"] = len(courses)
         logger.info(f"Monitoring {len(courses)} active course(s). FYP prioritized first.")
+
+        # Step 2b: Live Academic Standing & CGPA Extraction
+        try:
+            results_url = f"{self.auth.base_url}/student/results"
+            results_res = session.get(results_url, timeout=20, verify=False)
+            if results_res.status_code == 200:
+                academic_info = self.extractor.parse_academic_results(results_res.text)
+                if academic_info and "current_cgpa" in academic_info:
+                    live_cgpa = academic_info["current_cgpa"]
+                    live_credits = academic_info["completed_credits"]
+                    live_sgpa = academic_info.get("latest_sgpa", 0.0)
+                    live_term = academic_info.get("latest_term", "")
+                    
+                    self.db.set_student_profile("current_cgpa", str(live_cgpa))
+                    self.db.set_student_profile("completed_credits", str(live_credits))
+                    self.db.set_student_profile("latest_sgpa", str(live_sgpa))
+                    self.db.set_student_profile("latest_term", str(live_term))
+                    if "terms" in academic_info:
+                        self.db.set_student_profile("academic_transcript", json.dumps(academic_info["terms"]))
+                    
+                    logger.info(f"🎓 Live Portal Academic Sync: CGPA={live_cgpa}, Latest SGPA={live_sgpa} ({live_term}), Cumulative CH={live_credits}")
+        except Exception as e:
+            logger.warning(f"Failed to sync live academic results from portal: {e}")
 
         # Step 3: Scan each course for activities
         all_new_items: List[AcademicActivity] = []

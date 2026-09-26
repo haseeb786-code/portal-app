@@ -95,7 +95,7 @@ class OdoCustAuth:
         Sends a lightweight request to the portal to refresh the idle session timeout.
         """
         try:
-            res = self.session.get(f"{self.base_url}/student/dashboard", timeout=12, verify=False, allow_redirects=False)
+            res = self.session.get(f"{self.base_url}/student/dashboard", timeout=25, verify=False, allow_redirects=False)
             return res.status_code == 200
         except Exception:
             return False
@@ -124,7 +124,7 @@ class OdoCustAuth:
 
         try:
             dashboard_url = f"{self.base_url}/student/dashboard"
-            res = self.session.get(dashboard_url, timeout=12, verify=False, allow_redirects=False)
+            res = self.session.get(dashboard_url, timeout=25, verify=False, allow_redirects=False)
             
             # If valid, student dashboard returns 200 OK.
             # If expired/invalid, Odoo returns 302/303 redirect to /web/login?redirect=...

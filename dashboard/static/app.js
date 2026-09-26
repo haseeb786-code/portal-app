@@ -188,9 +188,31 @@ document.addEventListener("DOMContentLoaded", () => {
 
             // Executive profile metrics
             if (data.profile) {
-                setInnerText("ovCurrentCgpa", data.profile.current_cgpa ? data.profile.current_cgpa.toFixed(2) : "2.50");
+                setInnerText("ovCurrentCgpa", data.profile.current_cgpa ? data.profile.current_cgpa.toFixed(2) : "2.53");
+                setInnerText("ovCreditHours", `${data.profile.completed_credits || 104} Credit Hours`);
                 setInnerText("ovTargetGpa", data.profile.target_gpa ? data.profile.target_gpa.toFixed(2) : "4.00");
                 setInnerText("topbarGpaTarget", data.profile.target_gpa ? data.profile.target_gpa.toFixed(2) : "4.00");
+                if (data.profile.latest_sgpa !== undefined) {
+                    setInnerText("ovLatestSgpa", data.profile.latest_sgpa.toFixed(2));
+                }
+                if (data.profile.latest_term) {
+                    setInnerText("ovLatestTerm", data.profile.latest_term);
+                }
+
+                // Sync simulator inputs if present
+                const simCgpaInput = document.getElementById("simCurrentCgpa");
+                if (simCgpaInput && !simCgpaInput.dataset.userEdited) {
+                    simCgpaInput.value = data.profile.current_cgpa ? data.profile.current_cgpa.toFixed(2) : "2.53";
+                }
+                const simCreditsInput = document.getElementById("simCredits");
+                if (simCreditsInput && !simCreditsInput.dataset.userEdited) {
+                    simCreditsInput.value = data.profile.completed_credits || 104;
+                }
+
+                // Render transcript table if terms exist
+                if (data.profile.terms && data.profile.terms.length > 0) {
+                    renderTranscriptTable(data.profile.terms);
+                }
             }
             if (data.avg_attendance !== undefined) {
                 setInnerText("ovAvgAttendance", `${data.avg_attendance.toFixed(1)}%`);
@@ -268,8 +290,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 setValueIfElem("settingReminderHours", settings.reminder_hours.replace(/[\[\]]/g, ''));
             }
             setValueIfElem("settingDailyTime", settings.daily_summary_time);
-            setValueIfElem("settingCurrentCgpa", settings.current_cgpa || "2.50");
-            setValueIfElem("settingCompletedCredits", settings.completed_credits || "100");
+            setValueIfElem("settingCurrentCgpa", settings.current_cgpa || "2.53");
+            setValueIfElem("settingCompletedCredits", settings.completed_credits || "104");
             setValueIfElem("settingTargetGpa", settings.target_gpa || "4.00");
         } catch (e) {
             console.warn("fetchSettings error:", e);
@@ -723,8 +745,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     async function simulateGpa() {
-        const curCgpa = parseFloat(document.getElementById("simCurrentCgpa").value) || 2.50;
-        const credits = parseInt(document.getElementById("simCredits").value) || 100;
+        const curCgpa = parseFloat(document.getElementById("simCurrentCgpa").value) || 2.53;
+        const credits = parseInt(document.getElementById("simCredits").value) || 104;
         const targetGpa = parseFloat(document.getElementById("simTargetGpa").value) || 4.00;
         const resultBox = document.getElementById("gpaResultBox");
         if (!resultBox) return;
@@ -760,6 +782,45 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch (e) {
             resultBox.innerHTML = `⚠️ Error: ${escapeHtml(e.message)}`;
         }
+    }
+
+    function renderTranscriptTable(terms) {
+        const tbody = document.getElementById("transcriptTableBody");
+        if (!tbody) return;
+
+        if (!terms || terms.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 20px; color: var(--text-muted);">No transcript records synced yet.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = terms.map((t, idx) => {
+            const isLatest = idx === terms.length - 1;
+            const sgpaNum = parseFloat(t.sgpa);
+            const sgpaColor = sgpaNum >= 3.5 ? 'var(--gold)' : (sgpaNum >= 2.5 ? 'var(--success)' : 'var(--warning)');
+            const statusBadge = isLatest 
+                ? `<span class="badge badge-gold-glow">Latest Term</span>` 
+                : `<span class="badge badge-subtle">Completed</span>`;
+
+            const coursesSummary = (t.courses && t.courses.length > 0)
+                ? `<span title="${t.courses.map(c => `${c.course}: ${c.grade} (${c.credit_hours} CH)`).join('\n')}" style="cursor: help; text-decoration: underline dotted;">${t.courses.length} courses</span>`
+                : `${t.courses ? t.courses.length : 0} courses`;
+
+            return `
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); ${isLatest ? 'background: rgba(245, 158, 11, 0.08); font-weight: 600;' : ''}">
+                    <td style="padding: 12px 14px;">
+                        <strong>${escapeHtml(t.term)}</strong>
+                        ${isLatest ? ' <span style="font-size: 10px; color: var(--gold);">(Active Baseline)</span>' : ''}
+                    </td>
+                    <td style="padding: 12px 14px; text-align: right; color: var(--text-muted);">${t.attempted_ch ? Number(t.attempted_ch).toFixed(1) : '-'}</td>
+                    <td style="padding: 12px 14px; text-align: right; color: var(--text-muted);">${t.earned_ch ? Number(t.earned_ch).toFixed(1) : '-'}</td>
+                    <td style="padding: 12px 14px; text-align: right;"><strong>${t.cumulative_ch ? Number(t.cumulative_ch).toFixed(1) : '-'}</strong></td>
+                    <td style="padding: 12px 14px; text-align: right; color: ${sgpaColor}; font-weight: 700;">${sgpaNum.toFixed(2)}</td>
+                    <td style="padding: 12px 14px; text-align: right; color: var(--primary); font-weight: 700; font-size: 14px;">${parseFloat(t.cgpa).toFixed(2)}</td>
+                    <td style="padding: 12px 14px; text-align: center;">${coursesSummary}</td>
+                    <td style="padding: 12px 14px; text-align: center;">${statusBadge}</td>
+                </tr>
+            `;
+        }).join("");
     }
 
     async function calculateFinalMarks() {
