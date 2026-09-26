@@ -61,6 +61,44 @@ document.addEventListener("DOMContentLoaded", () => {
         // Timeline filter
         document.getElementById("filterTimelineCourse").addEventListener("change", renderTimeline);
 
+        // AI Copilot events
+        document.querySelectorAll(".ai-prompt-chip").forEach(chip => {
+            chip.addEventListener("click", () => {
+                const prompt = chip.getAttribute("data-prompt");
+                document.getElementById("aiUserInput").value = prompt;
+                sendAiQuery(prompt);
+            });
+        });
+
+        const btnSendAi = document.getElementById("btnSendAiQuery");
+        if (btnSendAi) {
+            btnSendAi.addEventListener("click", () => {
+                const input = document.getElementById("aiUserInput");
+                if (input.value.trim()) {
+                    sendAiQuery(input.value.trim());
+                    input.value = "";
+                }
+            });
+        }
+
+        const aiInput = document.getElementById("aiUserInput");
+        if (aiInput) {
+            aiInput.addEventListener("keypress", (e) => {
+                if (e.key === "Enter") {
+                    if (aiInput.value.trim()) {
+                        sendAiQuery(aiInput.value.trim());
+                        aiInput.value = "";
+                    }
+                }
+            });
+        }
+
+        const btnSimGpa = document.getElementById("btnSimulateGpa");
+        if (btnSimGpa) btnSimGpa.addEventListener("click", simulateGpa);
+
+        const btnCalcFinal = document.getElementById("btnCalcFinal");
+        if (btnCalcFinal) btnCalcFinal.addEventListener("click", calculateFinalMarks);
+
         // Settings form
         document.getElementById("settingsForm").addEventListener("submit", saveSettings);
         document.getElementById("btnTestWhatsApp").addEventListener("click", sendTestWhatsApp);
@@ -296,7 +334,12 @@ document.addEventListener("DOMContentLoaded", () => {
                     <td>${escapeHtml(a.course_name)}</td>
                     <td>
                         <div style="font-weight: 600;">${escapeHtml(a.title)}</div>
-                        <div style="margin-top: 4px; display: flex; gap: 8px; flex-wrap: wrap;">
+                        ${a.ai_summary ? `
+                            <div style="margin-top: 6px; font-size: 12px; color: #c7d2fe; background: rgba(99,102,241,0.1); padding: 6px 10px; border-radius: 6px; border-left: 3px solid #818cf8; white-space: pre-line;">
+                                <strong>🤖 AI Brief:</strong> ${escapeHtml(a.ai_summary)}
+                            </div>
+                        ` : ''}
+                        <div style="margin-top: 6px; display: flex; gap: 8px; flex-wrap: wrap;">
                             ${a.local_file_path ? `
                                 <a href="/api/download-file?path=${encodeURIComponent(a.local_file_path)}" class="btn btn-outline btn-sm" style="font-size: 11px; padding: 2px 8px; color: var(--success); border-color: var(--success);">
                                     💾 Download File
@@ -403,6 +446,124 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!dateStr) return "No deadline";
         const d = new Date(dateStr);
         return d.toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+    }
+
+    // --- AI COPILOT & GPA FUNCTIONS ---
+    async function sendAiQuery(queryText) {
+        const chatContainer = document.getElementById("aiChatMessages");
+        if (!chatContainer) return;
+
+        // 1. Add User Message
+        const userDiv = document.createElement("div");
+        userDiv.className = "ai-message user";
+        userDiv.innerHTML = `<div class="ai-bubble">${escapeHtml(queryText)}</div>`;
+        chatContainer.appendChild(userDiv);
+
+        // 2. Add Assistant Thinking Bubble
+        const assistantDiv = document.createElement("div");
+        assistantDiv.className = "ai-message assistant";
+        assistantDiv.innerHTML = `
+            <div class="ai-avatar">🤖</div>
+            <div class="ai-bubble"><em>Analyzing portal data and calculating insights...</em></div>
+        `;
+        chatContainer.appendChild(assistantDiv);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+
+        try {
+            const res = await fetch("/api/ai/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ query: queryText })
+            });
+            const data = await res.json();
+            
+            // Format response (convert **bold** and newlines)
+            let formatted = escapeHtml(data.response || "No response received.")
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/\n/g, '<br>');
+
+            assistantDiv.querySelector(".ai-bubble").innerHTML = formatted;
+        } catch (err) {
+            assistantDiv.querySelector(".ai-bubble").innerHTML = `⚠️ Error querying Academic Agent: ${escapeHtml(err.message)}`;
+        }
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    async function simulateGpa() {
+        const curCgpa = parseFloat(document.getElementById("simCurrentCgpa").value) || 3.20;
+        const credits = parseInt(document.getElementById("simCredits").value) || 100;
+        const targetGpa = parseFloat(document.getElementById("simTargetGpa").value) || 3.66;
+        const resultBox = document.getElementById("gpaResultBox");
+
+        resultBox.innerHTML = `<em>Simulating CUST degree progression...</em>`;
+
+        try {
+            const res = await fetch("/api/gpa/projection");
+            const data = await res.json();
+
+            // Custom projection using user inputs
+            const semCredits = 15;
+            const newTotalQp = (curCgpa * credits) + (targetGpa * semCredits);
+            const newCgpa = (newTotalQp / (credits + semCredits)).toFixed(2);
+            const diff = (newCgpa - curCgpa).toFixed(2);
+            const maxCgpa = (((curCgpa * credits) + (4.0 * semCredits)) / (credits + semCredits)).toFixed(2);
+
+            resultBox.innerHTML = `
+                <div style="font-weight: 700; font-size: 14px; margin-bottom: 6px;">
+                    🎯 Projected Degree CGPA: <span style="font-size: 16px; color: #34d399;">${newCgpa}</span> 
+                    (${diff >= 0 ? '+' : ''}${diff})
+                </div>
+                <div style="margin-bottom: 6px;">
+                    • Semester Target GPA: <strong>${targetGpa.toFixed(2)}</strong> (based on 15 credits)<br>
+                    • Absolute Mathematical Ceiling: <strong>${maxCgpa}</strong> (if you achieve straight A's)
+                </div>
+                ${data.advising && data.advising.length > 0 ? `
+                    <div style="margin-top: 8px; font-size: 12px; color: #fde68a;">
+                        <strong>💡 Academic Advisor Insights:</strong><br>
+                        ${data.advising.map(a => `• ${escapeHtml(a)}`).join('<br>')}
+                    </div>
+                ` : ''}
+            `;
+        } catch (e) {
+            resultBox.innerHTML = `⚠️ Error: ${escapeHtml(e.message)}`;
+        }
+    }
+
+    async function calculateFinalMarks() {
+        const sessional = parseFloat(document.getElementById("calcSessionalObtained").value) || 0;
+        const sessionalTotal = parseFloat(document.getElementById("calcSessionalTotal").value) || 50;
+        const finalTotal = parseFloat(document.getElementById("calcFinalTotal").value) || 50;
+        const targetGrade = document.getElementById("calcTargetGrade").value || "A";
+        const resultBox = document.getElementById("calcResultBox");
+
+        resultBox.innerHTML = `<em>Calculating required exam score...</em>`;
+
+        try {
+            const res = await fetch("/api/gpa/calculate-final", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    sessional_obtained: sessional,
+                    sessional_total: sessionalTotal,
+                    final_exam_total: finalTotal,
+                    target_grade: targetGrade
+                })
+            });
+            const data = await res.json();
+
+            let color = data.is_achievable ? "#34d399" : "#f87171";
+            resultBox.innerHTML = `
+                <div style="font-weight: 700; color: ${color}; margin-bottom: 4px;">
+                    ${escapeHtml(data.status_message)}
+                </div>
+                <div style="font-size: 12px; color: #94a3b8;">
+                    Current Sessional: ${sessional}/${sessionalTotal} (${((sessional/sessionalTotal)*100).toFixed(1)}%) • Target: ${targetGrade} (${data.target_percentage}%)
+                </div>
+            `;
+        } catch (e) {
+            resultBox.innerHTML = `⚠️ Calculation failed: ${escapeHtml(e.message)}`;
+        }
     }
 
     function escapeHtml(str) {

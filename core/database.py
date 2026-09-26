@@ -76,6 +76,16 @@ class Database:
             act_cols = [c[1] for c in cursor.fetchall()]
             if "local_file_path" not in act_cols:
                 cursor.execute("ALTER TABLE activities ADD COLUMN local_file_path TEXT DEFAULT '';")
+            if "ai_summary" not in act_cols:
+                cursor.execute("ALTER TABLE activities ADD COLUMN ai_summary TEXT DEFAULT '';")
+
+            # Student Academic Profile
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS student_profile (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            );
+            """)
 
             # Notifications Log table
             cursor.execute("""
@@ -195,9 +205,9 @@ class Database:
                 INSERT INTO activities (
                     activity_id, course_id, course_name, activity_type, title, description,
                     posted_date, deadline, submission_status, marks, attachment_url,
-                    attachment_name, local_file_path, portal_url, priority, first_seen_at, last_checked_at,
+                    attachment_name, local_file_path, ai_summary, portal_url, priority, first_seen_at, last_checked_at,
                     first_notified_at, reminders_sent
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
                 """, (
                     activity.activity_id,
                     activity.course_id,
@@ -212,6 +222,7 @@ class Database:
                     activity.attachment_url,
                     activity.attachment_name,
                     activity.local_file_path,
+                    activity.ai_summary,
                     activity.portal_url,
                     activity.priority.value,
                     activity.first_seen_at.isoformat(),
@@ -245,6 +256,8 @@ class Database:
                 try:
                     if not activity.local_file_path and "local_file_path" in existing.keys() and existing["local_file_path"]:
                         activity.local_file_path = existing["local_file_path"]
+                    if not activity.ai_summary and "ai_summary" in existing.keys() and existing["ai_summary"]:
+                        activity.ai_summary = existing["ai_summary"]
                 except Exception:
                     pass
 
@@ -259,6 +272,7 @@ class Database:
                     attachment_url = ?,
                     attachment_name = ?,
                     local_file_path = ?,
+                    ai_summary = ?,
                     portal_url = ?,
                     priority = ?,
                     last_checked_at = ?
@@ -273,6 +287,7 @@ class Database:
                     activity.attachment_url,
                     activity.attachment_name,
                     activity.local_file_path,
+                    activity.ai_summary,
                     activity.portal_url,
                     activity.priority.value,
                     activity.last_checked_at.isoformat(),
@@ -285,6 +300,21 @@ class Database:
     def update_activity_local_file(self, activity_id: str, local_path: str):
         with self._get_connection() as conn:
             conn.execute("UPDATE activities SET local_file_path = ? WHERE activity_id = ?", (local_path, activity_id))
+            conn.commit()
+
+    def update_activity_ai_summary(self, activity_id: str, ai_summary: str):
+        with self._get_connection() as conn:
+            conn.execute("UPDATE activities SET ai_summary = ? WHERE activity_id = ?", (ai_summary, activity_id))
+            conn.commit()
+
+    def get_student_profile(self) -> Dict[str, str]:
+        with self._get_connection() as conn:
+            cursor = conn.execute("SELECT key, value FROM student_profile")
+            return {row["key"]: row["value"] for row in cursor.fetchall()}
+
+    def set_student_profile(self, key: str, value: str):
+        with self._get_connection() as conn:
+            conn.execute("INSERT OR REPLACE INTO student_profile (key, value) VALUES (?, ?)", (key, value))
             conn.commit()
 
     def get_all_activities(self) -> List[AcademicActivity]:
@@ -325,6 +355,13 @@ class Database:
         except Exception:
             local_path = ""
 
+        ai_summary = ""
+        try:
+            if "ai_summary" in row.keys() and row["ai_summary"]:
+                ai_summary = row["ai_summary"]
+        except Exception:
+            ai_summary = ""
+
         return AcademicActivity(
             activity_id=row["activity_id"],
             course_id=row["course_id"],
@@ -339,6 +376,7 @@ class Database:
             attachment_url=row["attachment_url"] or "",
             attachment_name=row["attachment_name"] or "",
             local_file_path=local_path,
+            ai_summary=ai_summary,
             portal_url=row["portal_url"] or "",
             priority=PriorityLevel(row["priority"]),
             first_seen_at=datetime.fromisoformat(row["first_seen_at"]),

@@ -54,6 +54,7 @@ class AcademicActivity:
     attachment_url: str = ""
     attachment_name: str = ""
     local_file_path: str = ""
+    ai_summary: str = ""
     portal_url: str = ""
     priority: PriorityLevel = PriorityLevel.NORMAL
     first_seen_at: datetime = field(default_factory=datetime.now)

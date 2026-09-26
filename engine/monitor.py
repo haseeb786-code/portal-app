@@ -11,6 +11,7 @@ from core.models import AcademicActivity, Course, NotificationRecord, PriorityLe
 from engine.priority import PriorityClassifier
 from engine.deadline import DeadlineEngine
 from engine.downloader import DocumentDownloader
+from engine.ai_agent import AcademicAIAgent
 from notifier.formatter import NotificationFormatter
 from notifier.whatsapp import BaseWhatsAppNotifier
 
@@ -34,6 +35,7 @@ class AcademicMonitorAgent:
         self.dashboard_url = dashboard_url
         self.deadline_engine = DeadlineEngine(self.db)
         self.downloader = DocumentDownloader(base_download_dir="downloads")
+        self.ai_agent = AcademicAIAgent()
 
     def run_check_cycle(self) -> Dict[str, Any]:
         """
@@ -141,6 +143,15 @@ class AcademicMonitorAgent:
                         activity.local_file_path = local_path
                         cycle_stats["files_downloaded"] += 1
 
+                # AI Document Analysis & 2-3 Line Summarization
+                if not activity.ai_summary:
+                    try:
+                        summary = self.ai_agent.analyze_document_and_summarize(activity)
+                        if summary:
+                            activity.ai_summary = summary
+                    except Exception as e:
+                        logger.warning(f"AI summarization skipped for {activity.title}: {e}")
+
                 # Upsert into database and check for diffs
                 saved_activity, is_new, changes = self.db.upsert_activity(activity)
 
@@ -176,7 +187,7 @@ class AcademicMonitorAgent:
                         msg = f"⏳ *Deadline Updated*\n\nCourse: {saved_activity.course_name}\nTask: {saved_activity.title}\nNew Deadline: {saved_activity.deadline.strftime('%d %B, %I:%M %p') if saved_activity.deadline else 'None'}\nRemaining: {saved_activity.remaining_str()}"
                         self._dispatch_notification(saved_activity.activity_id, "DEADLINE_CHANGE", PriorityLevel.CRITICAL, msg)
 
-        # Download any files for previously saved activities missing local files
+        # Download any files for previously saved activities missing local files & generate AI summaries
         try:
             for past_act in self.db.get_all_activities():
                 if past_act.attachment_url and (not past_act.local_file_path or not os.path.exists(past_act.local_file_path)):
@@ -185,8 +196,17 @@ class AcademicMonitorAgent:
                         past_act.local_file_path = dl_path
                         self.db.update_activity_local_file(past_act.activity_id, dl_path)
                         cycle_stats["files_downloaded"] += 1
+
+                if not past_act.ai_summary and (past_act.local_file_path or past_act.description):
+                    try:
+                        summary = self.ai_agent.analyze_document_and_summarize(past_act)
+                        if summary:
+                            past_act.ai_summary = summary
+                            self.db.update_activity_ai_summary(past_act.activity_id, summary)
+                    except Exception as e:
+                        logger.warning(f"Error generating AI summary for past activity: {e}")
         except Exception as e:
-            logger.warning(f"Error checking pending attachment downloads: {e}")
+            logger.warning(f"Error checking pending attachment downloads or AI summaries: {e}")
 
         # Step 4: Evaluate Approaching Deadlines & Send Scheduled Reminders
         due_reminders = self.deadline_engine.evaluate_reminders()

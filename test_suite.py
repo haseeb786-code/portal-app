@@ -243,5 +243,85 @@ class TestAcademicMonitor(unittest.TestCase):
             import shutil
             shutil.rmtree("test_downloads", ignore_errors=True)
 
+    def test_gpa_engine_calculations(self):
+        """Verify CUST GPA mapping, final exam calculator, and CGPA projection."""
+        from engine.gpa_engine import GPAEngine
+        
+        # Grade mapping
+        letter, point = GPAEngine.percentage_to_grade(85.5)
+        self.assertEqual(letter, "A")
+        self.assertEqual(point, 4.00)
+
+        letter_b, point_b = GPAEngine.percentage_to_grade(72.0)
+        self.assertEqual(letter_b, "B")
+        self.assertEqual(point_b, 3.00)
+
+        # Marks needed in final
+        calc = GPAEngine.calculate_marks_needed_in_final(
+            sessional_obtained=40.0,
+            sessional_total=50.0,
+            final_exam_total=50.0,
+            target_letter="A"
+        )
+        self.assertTrue(calc["is_achievable"])
+        self.assertEqual(calc["marks_needed"], 45.0)
+
+        # Cumulative CGPA projection
+        sem_courses = [
+            {"course_name": "FYP", "credits": 3, "expected_grade": "A"},
+            {"course_name": "Web Eng", "credits": 3, "expected_grade": "A"},
+        ]
+        proj = GPAEngine.project_cgpa(current_cgpa=3.20, completed_credits=100, semester_courses=sem_courses)
+        self.assertEqual(proj["semester_gpa"], 4.00)
+        self.assertGreater(proj["projected_cgpa"], 3.20)
+
+    def test_ai_agent_and_doc_parser(self):
+        """Verify text extraction from document parser and AI summarizer brief."""
+        from engine.doc_parser import DocumentParser
+        from engine.ai_agent import AcademicAIAgent
+
+        # Test text extraction
+        test_file = "test_sample_assignment.txt"
+        with open(test_file, "w", encoding="utf-8") as f:
+            f.write("Assignment 2: Develop a responsive web portal using Python.\n"
+                    "Submit your code on GitHub and upload a PDF report before Friday 11:59 PM.\n"
+                    "Plagiarism strictly prohibited. Marks: 10.")
+        
+        try:
+            extracted = DocumentParser.extract_text(test_file)
+            self.assertIn("Assignment 2", extracted)
+            self.assertIn("GitHub", extracted)
+
+            course = Course(course_id="c_test", name="Software Engineering")
+            self.db.upsert_course(course)
+
+            act = AcademicActivity(
+                activity_id="ai_test_1",
+                course_id=course.course_id,
+                course_name=course.name,
+                activity_type=ActivityType.ASSIGNMENT,
+                title="Assignment 2 Web Portal",
+                local_file_path=test_file
+            )
+
+            agent = AcademicAIAgent()
+            summary = agent.analyze_document_and_summarize(act)
+            self.assertTrue(len(summary) > 20)
+            self.assertTrue("Task:" in summary or "Deliverable:" in summary or len(summary) > 30)
+
+            # Test database persistence of ai_summary
+            act.ai_summary = summary
+            self.db.upsert_activity(act)
+            loaded = self.db.get_activity("ai_test_1")
+            self.assertEqual(loaded.ai_summary, summary)
+
+            # Test notification formatter inclusion
+            formatted = NotificationFormatter.format_new_activity(loaded)
+            self.assertIn("AI Executive Brief", formatted)
+            self.assertIn(summary, formatted)
+        finally:
+            if os.path.exists(test_file):
+                os.remove(test_file)
+
 if __name__ == "__main__":
     unittest.main()

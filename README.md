@@ -23,6 +23,9 @@ An intelligent, autonomous personal assistant that continuously monitors your **
   2. **Twilio WhatsApp API** (Enterprise-grade sandbox & official API)
   3. **Green-API** (Cloud gateway for personal/business accounts)
   4. **Console / Dashboard Log** (Local testing & zero-API verification)
+* **🤖 Autonomous AI Document Summarizer**: Parses any uploaded PDF, Word document, or Excel spreadsheet (`pypdf`, `python-docx`, `openpyxl`) and generates a crisp **2–3 line executive brief** explaining the core task, deliverables, and due date. Powered by **Gemini 3.8 Flash** with instant offline heuristic fallback.
+* **📊 CUST Degree & GPA Simulator Engine**: Simulates graduating CGPA, calculates exactly what scores you need in final exams to hit target letter grades (A, A-, B+), and provides strategic advising for high-leverage courses like FYP.
+* **💬 Interactive AI Academic Copilot**: Embedded conversational assistant in the web dashboard answering questions about upcoming deadlines, course strategies, and document contents in real-time.
 
 ---
 

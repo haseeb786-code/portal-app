@@ -25,6 +25,9 @@
                 <button class="nav-item active" data-tab="overview">
                     <span class="icon">📊</span> Overview
                 </button>
+                <button class="nav-item" data-tab="ai-copilot">
+                    <span class="icon">🤖</span> AI Copilot & GPA
+                </button>
                 <button class="nav-item" data-tab="deadlines">
                     <span class="icon">⏰</span> Deadlines & Timeline
                 </button>
@@ -195,6 +198,109 @@
                         </div>
                         <div class="notification-logs" id="notificationsLogList">
                             <!-- Injected by JS -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TAB: AI COPILOT & GPA ENGINE -->
+                <section class="tab-pane" id="pane-ai-copilot">
+                    <div class="ai-copilot-grid">
+                        <!-- AI Academic Advisor Chat -->
+                        <div class="card ai-chat-card">
+                            <div class="card-header">
+                                <h3>🤖 Academic Copilot & Document Intelligence</h3>
+                                <span class="badge badge-success">Gemini 3.8 Flash Ready</span>
+                            </div>
+                            <div class="ai-prompts-bar">
+                                <button class="ai-prompt-chip" data-prompt="How can I improve my CGPA to 3.5 this semester?">🎯 Improve CGPA to 3.5</button>
+                                <button class="ai-prompt-chip" data-prompt="What deadlines and assignments do I have coming up?">📅 Upcoming Deadlines</button>
+                                <button class="ai-prompt-chip" data-prompt="Summarize the latest FYP schedule and requirements.">🎓 FYP Symposium Status</button>
+                                <button class="ai-prompt-chip" data-prompt="Give me strategic academic advice for my courses.">💡 Course Strategy</button>
+                            </div>
+                            <div class="ai-chat-messages" id="aiChatMessages">
+                                <div class="ai-message assistant">
+                                    <div class="ai-avatar">🤖</div>
+                                    <div class="ai-bubble">
+                                        Hello Abdul Haseeb! I am your <strong>Autonomous Academic Copilot</strong> for ODOCUST.<br><br>
+                                        • I automatically read and summarize all uploaded documents/assignments in <strong>2-3 lines</strong>.<br>
+                                        • I track deadlines and calculate your <strong>GPA improvement paths</strong>.<br>
+                                        • Feel free to click any suggestion above or type your question below!
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="ai-chat-input-bar">
+                                <input type="text" id="aiUserInput" class="form-control" placeholder="Ask about deadlines, GPA improvement, assignments, or FYP...">
+                                <button class="btn btn-primary" id="btnSendAiQuery">Ask Agent</button>
+                            </div>
+                        </div>
+
+                        <!-- CUST GPA Simulator & Final Exam Target Calculator -->
+                        <div class="card gpa-simulator-card">
+                            <div class="card-header">
+                                <h3>📊 CUST Degree & GPA Simulator</h3>
+                            </div>
+                            <div class="gpa-form">
+                                <div class="form-row">
+                                    <div class="form-group col">
+                                        <label>Current CGPA</label>
+                                        <input type="number" step="0.01" id="simCurrentCgpa" class="form-control" value="3.20">
+                                    </div>
+                                    <div class="form-group col">
+                                        <label>Completed Credits</label>
+                                        <input type="number" id="simCredits" class="form-control" value="100">
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group col">
+                                        <label>Target Semester GPA</label>
+                                        <select id="simTargetGpa" class="form-control">
+                                            <option value="4.00">4.00 (All A's)</option>
+                                            <option value="3.80">3.80 (A's & A-'s)</option>
+                                            <option value="3.66" selected>3.66 (Target A- average)</option>
+                                            <option value="3.33">3.33 (Target B+ average)</option>
+                                            <option value="3.00">3.00 (Target B average)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <button class="btn btn-primary btn-block" id="btnSimulateGpa">🚀 Calculate GPA Projection</button>
+                                
+                                <div class="gpa-result-box" id="gpaResultBox">
+                                    <!-- Injected by JS -->
+                                </div>
+
+                                <hr style="margin: 20px 0; border: none; border-top: 1px solid var(--border-color);">
+
+                                <h4>📝 Final Exam Target Calculator</h4>
+                                <small class="form-hint" style="margin-bottom: 12px; display: block;">See what marks you need in the Final Exam to secure an A, B+, or B.</small>
+                                <div class="form-row">
+                                    <div class="form-group col">
+                                        <label>Sessional Scored</label>
+                                        <input type="number" step="0.5" id="calcSessionalObtained" class="form-control" placeholder="e.g. 40" value="40">
+                                    </div>
+                                    <div class="form-group col">
+                                        <label>Sessional Total</label>
+                                        <input type="number" id="calcSessionalTotal" class="form-control" value="50">
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group col">
+                                        <label>Final Exam Total</label>
+                                        <input type="number" id="calcFinalTotal" class="form-control" value="50">
+                                    </div>
+                                    <div class="form-group col">
+                                        <label>Target Grade</label>
+                                        <select id="calcTargetGrade" class="form-control">
+                                            <option value="A" selected>A (85%+) - 4.00</option>
+                                            <option value="A-">A- (80%+) - 3.66</option>
+                                            <option value="B+">B+ (75%+) - 3.33</option>
+                                            <option value="B">B (71%+) - 3.00</option>
+                                            <option value="B-">B- (68%+) - 2.66</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <button class="btn btn-outline btn-block" id="btnCalcFinal">Calculate Needed Final Marks</button>
+                                <div class="calc-result-box" id="calcResultBox" style="margin-top: 12px;"></div>
+                            </div>
                         </div>
                     </div>
                 </section>

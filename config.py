@@ -52,3 +52,12 @@ DAILY_SUMMARY_TIME = os.getenv("DAILY_SUMMARY_TIME", "08:00")  # HH:MM format
 DASHBOARD_HOST = os.getenv("DASHBOARD_HOST", "127.0.0.1")
 DASHBOARD_PORT = int(os.getenv("DASHBOARD_PORT", "8080"))
 DATABASE_PATH = str(BASE_DIR / os.getenv("DATABASE_PATH", "odocust_monitor.db"))
+
+# AI Copilot & Academic Profile Settings
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+AI_AGENT_ENABLED = os.getenv("AI_AGENT_ENABLED", "true").lower() in ("true", "1", "yes")
+STUDENT_CURRENT_CGPA = float(os.getenv("STUDENT_CURRENT_CGPA", "3.20"))
+STUDENT_TARGET_GPA = float(os.getenv("STUDENT_TARGET_GPA", "3.50"))
+STUDENT_COMPLETED_CREDITS = int(os.getenv("STUDENT_COMPLETED_CREDITS", "100"))
+

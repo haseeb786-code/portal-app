@@ -59,6 +59,9 @@ class NotificationFormatter:
         elif activity.attachment_url:
             lines.append(f"📎 *Attachment:* {activity.attachment_url}")
 
+        if activity.ai_summary:
+            lines.append(f"\n🤖 *AI Executive Brief:*\n{activity.ai_summary}")
+
         if activity.portal_url:
             lines.append(f"\n🔗 *Open Portal:* {activity.portal_url}")
 

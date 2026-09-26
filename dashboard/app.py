@@ -83,6 +83,7 @@ def create_dashboard_app(database: Database, monitor_agent=None) -> FastAPI:
                 "attachment_url": a.attachment_url,
                 "attachment_name": a.attachment_name,
                 "local_file_path": a.local_file_path,
+                "ai_summary": a.ai_summary,
                 "portal_url": a.portal_url,
                 "priority": a.priority.value,
                 "reminders_sent": a.reminders_sent
@@ -118,6 +119,91 @@ def create_dashboard_app(database: Database, monitor_agent=None) -> FastAPI:
             database.set_setting(k, str(v))
         return {"status": "success", "message": "Settings updated."}
 
+    @app.get("/api/gpa/projection")
+    async def get_gpa_projection():
+        from engine.gpa_engine import GPAEngine
+        profile = database.get_student_profile()
+        current_cgpa = float(profile.get("current_cgpa", 3.20))
+        completed_credits = int(profile.get("completed_credits", 100))
+        target_gpa = float(profile.get("target_gpa", 3.50))
+
+        courses = database.get_all_courses()
+        sem_courses = [{"course_name": c.name, "credits": 3, "expected_grade": "A"} for c in courses]
+        if not sem_courses:
+            sem_courses = [
+                {"course_name": "FYP - Design Project", "credits": 3, "expected_grade": "A"},
+                {"course_name": "Software Architecture", "credits": 3, "expected_grade": "A"},
+                {"course_name": "Course 3", "credits": 3, "expected_grade": "A-"},
+                {"course_name": "Course 4", "credits": 3, "expected_grade": "B+"}
+            ]
+
+        projection = GPAEngine.project_cgpa(current_cgpa, completed_credits, sem_courses)
+        
+        # Course advising
+        course_status = [{"name": c.name, "attendance_pct": c.attendance_pct, "is_fyp": c.is_fyp} for c in courses]
+        advising = GPAEngine.get_strategic_advising(course_status)
+
+        return {
+            "profile": {
+                "current_cgpa": current_cgpa,
+                "completed_credits": completed_credits,
+                "target_gpa": target_gpa
+            },
+            "projection": projection,
+            "advising": advising,
+            "scale": [
+                {"grade": "A", "min_pct": 85, "gpa": 4.00},
+                {"grade": "A-", "min_pct": 80, "gpa": 3.66},
+                {"grade": "B+", "min_pct": 75, "gpa": 3.33},
+                {"grade": "B", "min_pct": 71, "gpa": 3.00},
+                {"grade": "B-", "min_pct": 68, "gpa": 2.66},
+                {"grade": "C+", "min_pct": 64, "gpa": 2.33},
+                {"grade": "C", "min_pct": 60, "gpa": 2.00},
+            ]
+        }
+
+    class FinalCalcRequest(BaseModel):
+        sessional_obtained: float
+        sessional_total: float
+        final_exam_total: float = 40.0
+        target_grade: str = "A"
+
+    @app.post("/api/gpa/calculate-final")
+    async def calculate_final_needed(req: FinalCalcRequest):
+        from engine.gpa_engine import GPAEngine
+        return GPAEngine.calculate_marks_needed_in_final(
+            req.sessional_obtained, req.sessional_total, req.final_exam_total, req.target_grade
+        )
+
+    class AIQueryRequest(BaseModel):
+        query: str
+
+    @app.post("/api/ai/chat")
+    async def ai_academic_chat(req: AIQueryRequest):
+        from engine.ai_agent import AcademicAIAgent
+        agent = monitor_agent.ai_agent if (monitor_agent and hasattr(monitor_agent, "ai_agent")) else AcademicAIAgent()
+        
+        courses = database.get_all_courses()
+        all_activities = database.get_all_activities()
+        pending = [a for a in all_activities if a.submission_status not in (SubmissionStatus.SUBMITTED, SubmissionStatus.GRADED) and a.activity_type in (ActivityType.ASSIGNMENT, ActivityType.PROJECT)]
+        profile = database.get_student_profile()
+        
+        # Downloaded files list
+        downloads_dir = Path(__file__).resolve().parent.parent / "downloads"
+        downloaded_files = [str(f.name) for f in downloads_dir.glob("**/*") if f.is_file()]
+
+        context = {
+            "courses": courses,
+            "all_activities": all_activities,
+            "pending_activities": pending,
+            "current_cgpa": profile.get("current_cgpa", 3.20),
+            "completed_credits": profile.get("completed_credits", 100),
+            "downloaded_files": downloaded_files
+        }
+
+        answer = agent.answer_query(req.query, context)
+        return {"query": req.query, "response": answer}
+
     @app.post("/api/trigger-check")
     async def trigger_check(background_tasks: BackgroundTasks):
         if monitor_agent:
@@ -141,3 +227,4 @@ def create_dashboard_app(database: Database, monitor_agent=None) -> FastAPI:
             raise HTTPException(status_code=400, detail="Failed to send message. Check WhatsApp provider settings.")
 
     return app
+
