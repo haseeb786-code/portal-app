@@ -1,7 +1,15 @@
 import logging
 import threading
 import time
+import time
 import sys
+
+# Ensure UTF-8 stdout/stderr on Windows
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8")
+
 import uvicorn
 
 import config

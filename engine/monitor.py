@@ -235,6 +235,7 @@ class AcademicMonitorAgent:
         - Assessments (/student/course/assessment/<hash>)
         """
         logger.info(f"Scanning course: {course.name} ({course.code})")
+        activities: List[AcademicActivity] = []
 
         # 1. Announcements / News
         info_url = f"{self.auth.base_url}/student/course/info/{course.course_id}"

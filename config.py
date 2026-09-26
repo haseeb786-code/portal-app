@@ -50,7 +50,7 @@ DAILY_SUMMARY_TIME = os.getenv("DAILY_SUMMARY_TIME", "08:00")  # HH:MM format
 
 # Server & Dashboard Configuration
 DASHBOARD_HOST = os.getenv("DASHBOARD_HOST", "127.0.0.1")
-DASHBOARD_PORT = int(os.getenv("DASHBOARD_PORT", "8080"))
+DASHBOARD_PORT = int(os.getenv("DASHBOARD_PORT", "8000"))
 DATABASE_PATH = str(BASE_DIR / os.getenv("DATABASE_PATH", "odocust_monitor.db"))
 
 # AI Copilot & Academic Profile Settings
