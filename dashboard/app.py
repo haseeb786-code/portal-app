@@ -226,5 +226,149 @@ def create_dashboard_app(database: Database, monitor_agent=None) -> FastAPI:
         else:
             raise HTTPException(status_code=400, detail="Failed to send message. Check WhatsApp provider settings.")
 
+    # ---------------------------------------------------------------
+    # SESSIONAL MARGIN GUARD — /api/margin/*
+    # ---------------------------------------------------------------
+
+    class MarkEntryRequest(BaseModel):
+        course_id: str
+        course_name: str
+        component: str
+        component_type: str = "other"   # quiz | assignment | midterm | lab | other
+        obtained: float
+        total: float
+
+    @app.post("/api/margin/add-mark")
+    async def add_mark(req: MarkEntryRequest):
+        """Add or update a component mark for a course."""
+        database.upsert_course_mark(
+            req.course_id, req.course_name,
+            req.component, req.component_type,
+            req.obtained, req.total
+        )
+        return {"status": "success", "message": f"Mark saved: {req.component} ({req.obtained}/{req.total})"}
+
+    @app.get("/api/margin/report")
+    async def get_margin_report():
+        """Return per-course sessional margin guard report."""
+        from engine.margin_guard import MarginGuard
+        all_marks = database.get_all_course_marks()
+
+        # Group by course
+        course_map: Dict[str, list] = {}
+        for m in all_marks:
+            cid = m["course_id"]
+            if cid not in course_map:
+                course_map[cid] = []
+            course_map[cid].append(m)
+
+        report = []
+        for cid, marks in course_map.items():
+            from engine.margin_guard import CourseMarksEntry
+            entries = [
+                CourseMarksEntry(
+                    course_id=m["course_id"],
+                    course_name=m["course_name"],
+                    component=m["component"],
+                    obtained=m["obtained"],
+                    total=m["total"],
+                    component_type=m["component_type"],
+                    entered_at=m["entered_at"]
+                )
+                for m in marks
+            ]
+            margin = MarginGuard.compute_margin(entries)
+            report.append({
+                "course_id": cid,
+                "course_name": marks[0]["course_name"],
+                "components": [
+                    {
+                        "component": m["component"],
+                        "component_type": m["component_type"],
+                        "obtained": m["obtained"],
+                        "total": m["total"],
+                        "pct": round(m["obtained"] / m["total"] * 100, 1) if m["total"] > 0 else 0,
+                        "entered_at": m["entered_at"]
+                    }
+                    for m in marks
+                ],
+                **margin
+            })
+
+        return {"courses": report}
+
+    @app.delete("/api/margin/delete-mark/{mark_id}")
+    async def delete_mark(mark_id: int):
+        database.delete_course_mark(mark_id)
+        return {"status": "success", "message": f"Mark entry {mark_id} deleted."}
+
+    @app.get("/api/margin/marks/{course_id}")
+    async def get_marks_for_course(course_id: str):
+        return database.get_course_marks(course_id)
+
+    # ---------------------------------------------------------------
+    # PRE-SUBMISSION RUBRIC AUDITOR — /api/rubric/*
+    # ---------------------------------------------------------------
+
+    class RubricAuditRequest(BaseModel):
+        draft_file_path: str
+        activity_id: str = ""
+        course_name: str = ""
+        assignment_title: str = ""
+        assignment_description: str = ""
+
+    @app.post("/api/rubric/audit")
+    async def run_rubric_audit(req: RubricAuditRequest):
+        """Trigger a rubric audit on a draft file path."""
+        from engine.rubric_auditor import RubricAuditor
+        auditor = RubricAuditor()
+
+        # If activity_id provided, grab description + local file from DB
+        assignment_description = req.assignment_description
+        assignment_file_path = ""
+        if req.activity_id:
+            activity = database.get_activity(req.activity_id)
+            if activity:
+                assignment_description = assignment_description or activity.description
+                assignment_file_path = activity.local_file_path
+
+        result = auditor.audit_draft(
+            draft_path=req.draft_file_path,
+            assignment_description=assignment_description,
+            assignment_file_path=assignment_file_path,
+            course_name=req.course_name,
+            assignment_title=req.assignment_title
+        )
+
+        # Persist to DB
+        row_id = database.save_rubric_audit(
+            result,
+            activity_id=req.activity_id,
+            course_name=req.course_name,
+            assignment_title=req.assignment_title
+        )
+        result["audit_id"] = row_id
+        return result
+
+    @app.get("/api/rubric/history")
+    async def get_audit_history(limit: int = 20):
+        """Get recent rubric audit history."""
+        return database.get_recent_audits(limit)
+
+    @app.get("/api/rubric/scan-submissions")
+    async def scan_submissions_folder():
+        """Scan the submissions/ folder for any draft files and audit all."""
+        from engine.rubric_auditor import RubricAuditor
+        auditor = RubricAuditor()
+        results = auditor.scan_submissions_folder()
+        saved = []
+        for r in results:
+            row_id = database.save_rubric_audit(r)
+            r["audit_id"] = row_id
+            saved.append(r)
+        return {"audits": saved, "count": len(saved)}
+
     return app
+
+
 

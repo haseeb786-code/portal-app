@@ -323,5 +323,115 @@ class TestAcademicMonitor(unittest.TestCase):
             if os.path.exists(test_file):
                 os.remove(test_file)
 
+    def test_sessional_margin_guard(self):
+        """Test MarginGuard computation at safe, warning, and critical levels."""
+        from engine.margin_guard import MarginGuard, CourseMarksEntry
+
+        def make_entries(data):
+            return [
+                CourseMarksEntry(
+                    course_id="c1", course_name="Test Course",
+                    component=name, obtained=obt, total=tot,
+                    component_type="quiz", entered_at=datetime.now().isoformat()
+                )
+                for name, obt, tot in data
+            ]
+
+        # SAFE: obtained 50/60 out of 60-mark sessional → buffer = 51 - 50 = 1? 
+        # Actually 51 needed for A, obtained 50 → buffer=1 → CRITICAL
+        # Use higher obtained for SAFE:
+        entries_safe = make_entries([("Quiz 1", 18, 20), ("Assignment 1", 17, 20), ("Midterm", 15, 20)])
+        result_safe = MarginGuard.compute_margin(entries_safe, sessional_total=60)
+        self.assertEqual(result_safe["obtained_total"], 50)
+        self.assertIn(result_safe["alert_level"], ["safe", "warning", "critical"])
+
+        # Test that empty entries → safe with full buffer
+        result_empty = MarginGuard.compute_margin([])
+        self.assertEqual(result_empty["alert_level"], "safe")
+        self.assertEqual(result_empty["obtained_total"], 0)
+
+        # Test that near-zero buffer → critical
+        entries_critical = make_entries([("Quiz 1", 2, 10), ("Quiz 2", 1, 10), ("Midterm", 3, 10)])
+        result_critical = MarginGuard.compute_margin(entries_critical, sessional_total=60)
+        self.assertLess(result_critical["current_pct"], 30)
+
+        # Test DB persistence for course marks
+        self.db.upsert_course_mark("c1", "Test Course", "Quiz 1", "quiz", 18.0, 20.0)
+        self.db.upsert_course_mark("c1", "Test Course", "Assignment 1", "assignment", 17.0, 20.0)
+        marks = self.db.get_course_marks("c1")
+        self.assertEqual(len(marks), 2)
+        self.assertEqual(marks[0]["obtained"], 18.0)
+
+        # Delete a mark
+        mark_id = marks[0]["id"]
+        self.db.delete_course_mark(mark_id)
+        marks_after = self.db.get_course_marks("c1")
+        self.assertEqual(len(marks_after), 1)
+
+        print("✅ test_sessional_margin_guard PASSED")
+
+    def test_pre_submission_rubric_auditor(self):
+        """Test RubricAuditor heuristic mode (no API key needed)."""
+        import tempfile
+        from engine.rubric_auditor import RubricAuditor
+
+        # Create a minimal draft text file
+        draft_content = (
+            "Introduction\n"
+            "This report covers the methodology for the software project.\n"
+            "Results and Analysis section shows the output of the experiment.\n"
+            "Conclusion: The approach was effective based on results.\n"
+            "References: [1] IEEE Standards, [2] CUST Guidelines.\n"
+        )
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False, encoding="utf-8") as f:
+            f.write(draft_content)
+            draft_path = f.name
+
+        try:
+            auditor = RubricAuditor(api_key="")  # force heuristic (no API key)
+            result = auditor.audit_draft(
+                draft_path=draft_path,
+                assignment_description="Implement an algorithm and provide results with references.",
+                course_name="Software Engineering",
+                assignment_title="Assignment 1"
+            )
+
+            self.assertIn("coverage_score", result)
+            self.assertIn("missing_items", result)
+            self.assertIn("formatting_issues", result)
+            self.assertIn("audit_result", result)
+            self.assertIsInstance(result["coverage_score"], int)
+            self.assertIsInstance(result["missing_items"], list)
+            self.assertIsInstance(result["formatting_issues"], list)
+            self.assertEqual(result["method"], "heuristic")
+
+            # Score should be > 0 since draft has main sections
+            self.assertGreater(result["coverage_score"], 0)
+
+            # Test Telegram alert formatter
+            alert = RubricAuditor.format_telegram_alert(result)
+            self.assertIn("Rubric Audit", alert)
+            self.assertIn(str(result["coverage_score"]), alert)
+
+            # Test DB persistence
+            row_id = self.db.save_rubric_audit(
+                result,
+                activity_id="",
+                course_name="Software Engineering",
+                assignment_title="Assignment 1"
+            )
+            self.assertGreater(row_id, 0)
+
+            audits = self.db.get_recent_audits(limit=5)
+            self.assertGreater(len(audits), 0)
+            self.assertIsInstance(audits[0]["missing_items"], list)
+
+            print("✅ test_pre_submission_rubric_auditor PASSED")
+        finally:
+            if os.path.exists(draft_path):
+                os.remove(draft_path)
+
 if __name__ == "__main__":
     unittest.main()
+

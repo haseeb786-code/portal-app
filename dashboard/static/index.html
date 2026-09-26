@@ -40,6 +40,12 @@
                 <button class="nav-item" data-tab="notifications">
                     <span class="icon">📱</span> WhatsApp Alerts
                 </button>
+                <button class="nav-item" data-tab="margin-guard">
+                    <span class="icon">🛡️</span> Margin Guard
+                </button>
+                <button class="nav-item" data-tab="rubric-auditor">
+                    <span class="icon">📝</span> Rubric Auditor
+                </button>
                 <button class="nav-item" data-tab="settings">
                     <span class="icon">⚙️</span> Settings
                 </button>
@@ -352,6 +358,123 @@
                         </form>
                     </div>
                 </section>
+
+                <!-- =========================================================
+                     PANE: SESSIONAL MARGIN GUARD
+                     ========================================================= -->
+                <section class="content-pane" id="pane-margin-guard">
+                    <div class="pane-header">
+                        <h1>🛡️ Sessional Margin Guard</h1>
+                        <p class="pane-subtitle">Track marks per component. Get alerted before you drop below 85% (Grade A)</p>
+                    </div>
+
+                    <!-- Add Mark Form -->
+                    <div class="card mg-add-form">
+                        <h3>➕ Log Component Marks</h3>
+                        <div class="form-row-4">
+                            <div class="form-group">
+                                <label>Course</label>
+                                <select id="mgCourseSelect" class="form-control">
+                                    <option value="">Loading courses...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Component Name</label>
+                                <input type="text" id="mgComponent" class="form-control" placeholder="e.g. Quiz 1, Assignment 2, Midterm">
+                            </div>
+                            <div class="form-group">
+                                <label>Type</label>
+                                <select id="mgCompType" class="form-control">
+                                    <option value="quiz">Quiz</option>
+                                    <option value="assignment">Assignment</option>
+                                    <option value="midterm">Midterm</option>
+                                    <option value="lab">Lab</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Obtained / Total</label>
+                                <div class="marks-inline">
+                                    <input type="number" id="mgObtained" class="form-control" placeholder="e.g. 18" step="0.5" min="0">
+                                    <span>/</span>
+                                    <input type="number" id="mgTotal" class="form-control" placeholder="e.g. 20" step="0.5" min="1">
+                                </div>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" onclick="addMarkEntry()">Save Mark</button>
+                        <span id="mgSaveMsg" class="inline-msg"></span>
+                    </div>
+
+                    <!-- Report -->
+                    <div class="card">
+                        <div class="card-header-row">
+                            <h3>📊 Course Margin Report</h3>
+                            <button class="btn btn-outline btn-sm" onclick="loadMarginReport()">🔄 Refresh</button>
+                        </div>
+                        <div id="mgReportContainer">
+                            <p class="empty-state">Loading margin report...</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- =========================================================
+                     PANE: PRE-SUBMISSION RUBRIC AUDITOR
+                     ========================================================= -->
+                <section class="content-pane" id="pane-rubric-auditor">
+                    <div class="pane-header">
+                        <h1>📝 Pre-Submission Rubric Auditor</h1>
+                        <p class="pane-subtitle">Drop your draft in the <code>submissions/</code> folder, then audit it against the assignment rubric using AI</p>
+                    </div>
+
+                    <!-- Audit Form -->
+                    <div class="card ra-form">
+                        <h3>🔍 Run Rubric Audit</h3>
+                        <div class="form-group">
+                            <label>Draft File Path</label>
+                            <input type="text" id="raDraftPath" class="form-control" placeholder="e.g. submissions/assignment1_draft.pdf">
+                        </div>
+                        <div class="form-row-3">
+                            <div class="form-group">
+                                <label>Course Name (optional)</label>
+                                <input type="text" id="raCourseName" class="form-control" placeholder="e.g. FYP - Design Project">
+                            </div>
+                            <div class="form-group">
+                                <label>Assignment Title (optional)</label>
+                                <input type="text" id="raAssignmentTitle" class="form-control" placeholder="e.g. Assignment 2">
+                            </div>
+                            <div class="form-group">
+                                <label>Activity ID (optional — links rubric from DB)</label>
+                                <input type="text" id="raActivityId" class="form-control" placeholder="Leave blank to auto-match">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Assignment Description / Rubric (paste manually or leave blank to auto-detect)</label>
+                            <textarea id="raDescription" class="form-control" rows="4" placeholder="Paste assignment requirements or rubric here..."></textarea>
+                        </div>
+                        <div class="form-actions">
+                            <button class="btn btn-primary" onclick="runRubricAudit()">🚀 Audit Draft</button>
+                            <button class="btn btn-outline" onclick="scanSubmissionsFolder()">📂 Scan submissions/ Folder</button>
+                        </div>
+                    </div>
+
+                    <!-- Audit Result -->
+                    <div class="card" id="raResultCard" style="display:none">
+                        <h3>✅ Audit Result</h3>
+                        <div id="raResultContent"></div>
+                    </div>
+
+                    <!-- History -->
+                    <div class="card">
+                        <div class="card-header-row">
+                            <h3>🕘 Audit History</h3>
+                            <button class="btn btn-outline btn-sm" onclick="loadAuditHistory()">🔄 Refresh</button>
+                        </div>
+                        <div id="raHistoryContainer">
+                            <p class="empty-state">Loading audit history...</p>
+                        </div>
+                    </div>
+                </section>
+
             </div>
         </main>
     </div>
@@ -359,3 +482,4 @@
     <script src="/static/app.js"></script>
 </body>
 </html>
+

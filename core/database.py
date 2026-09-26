@@ -101,6 +101,38 @@ class Database:
             );
             """)
 
+            # Course Marks table (Sessional Margin Guard)
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS course_marks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                course_id TEXT NOT NULL,
+                course_name TEXT NOT NULL,
+                component TEXT NOT NULL,
+                component_type TEXT NOT NULL DEFAULT 'other',
+                obtained REAL NOT NULL,
+                total REAL NOT NULL,
+                entered_at TEXT NOT NULL,
+                UNIQUE(course_id, component) ON CONFLICT REPLACE
+            );
+            """)
+
+            # Rubric Audits table (Pre-Submission Auditor)
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS rubric_audits (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                draft_file TEXT NOT NULL,
+                activity_id TEXT,
+                course_name TEXT,
+                assignment_title TEXT,
+                coverage_score INTEGER DEFAULT 0,
+                missing_items TEXT DEFAULT '[]',
+                formatting_issues TEXT DEFAULT '[]',
+                audit_result TEXT,
+                method TEXT DEFAULT 'heuristic',
+                audited_at TEXT NOT NULL
+            );
+            """)
+
             # System Settings table
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS settings (
@@ -470,3 +502,81 @@ class Database:
                 "upcoming_24h": upcoming_deadlines_24h,
                 "overdue_count": overdue_count
             }
+
+    # --- COURSE MARKS (Sessional Margin Guard) ---
+
+    def upsert_course_mark(self, course_id: str, course_name: str,
+                           component: str, component_type: str,
+                           obtained: float, total: float):
+        """Insert or replace a mark entry for a course component."""
+        with self._get_connection() as conn:
+            conn.execute("""
+            INSERT OR REPLACE INTO course_marks
+                (course_id, course_name, component, component_type, obtained, total, entered_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?);
+            """, (course_id, course_name, component, component_type,
+                  obtained, total, datetime.now().isoformat()))
+            conn.commit()
+
+    def get_course_marks(self, course_id: str) -> List[Dict[str, Any]]:
+        """Returns all mark entries for a course, ordered by entry time."""
+        with self._get_connection() as conn:
+            cursor = conn.execute(
+                "SELECT * FROM course_marks WHERE course_id = ? ORDER BY entered_at ASC",
+                (course_id,)
+            )
+            return [dict(row) for row in cursor.fetchall()]
+
+    def get_all_course_marks(self) -> List[Dict[str, Any]]:
+        """Returns all mark entries across all courses."""
+        with self._get_connection() as conn:
+            cursor = conn.execute("SELECT * FROM course_marks ORDER BY course_name, entered_at ASC")
+            return [dict(row) for row in cursor.fetchall()]
+
+    def delete_course_mark(self, mark_id: int):
+        """Deletes a mark entry by its primary key id."""
+        with self._get_connection() as conn:
+            conn.execute("DELETE FROM course_marks WHERE id = ?", (mark_id,))
+            conn.commit()
+
+    # --- RUBRIC AUDITS (Pre-Submission Auditor) ---
+
+    def save_rubric_audit(self, audit: Dict[str, Any], activity_id: str = "",
+                          course_name: str = "", assignment_title: str = "") -> int:
+        """Persists a rubric audit result. Returns the new row id."""
+        with self._get_connection() as conn:
+            cursor = conn.execute("""
+            INSERT INTO rubric_audits
+                (draft_file, activity_id, course_name, assignment_title,
+                 coverage_score, missing_items, formatting_issues,
+                 audit_result, method, audited_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+            """, (
+                audit.get("draft_file", ""),
+                activity_id,
+                course_name,
+                assignment_title,
+                audit.get("coverage_score", 0),
+                json.dumps(audit.get("missing_items", [])),
+                json.dumps(audit.get("formatting_issues", [])),
+                audit.get("audit_result", ""),
+                audit.get("method", "heuristic"),
+                audit.get("audited_at", datetime.now().isoformat())
+            ))
+            conn.commit()
+            return cursor.lastrowid
+
+    def get_recent_audits(self, limit: int = 20) -> List[Dict[str, Any]]:
+        """Returns most recent rubric audits."""
+        with self._get_connection() as conn:
+            cursor = conn.execute(
+                "SELECT * FROM rubric_audits ORDER BY id DESC LIMIT ?", (limit,)
+            )
+            rows = []
+            for row in cursor.fetchall():
+                d = dict(row)
+                d["missing_items"] = json.loads(d.get("missing_items") or "[]")
+                d["formatting_issues"] = json.loads(d.get("formatting_issues") or "[]")
+                rows.append(d)
+            return rows
+

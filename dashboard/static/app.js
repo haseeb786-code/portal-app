@@ -575,4 +575,255 @@ document.addEventListener("DOMContentLoaded", () => {
             .replace(/"/g, "&quot;")
             .replace(/'/g, "&#039;");
     }
+
+    // ================================================================
+    //  SESSIONAL MARGIN GUARD
+    // ================================================================
+
+    async function populateCourseDropdown() {
+        const sel = document.getElementById("mgCourseSelect");
+        if (!sel) return;
+        try {
+            const courses = await fetch("/api/courses").then(r => r.json());
+            sel.innerHTML = courses.map(c =>
+                `<option value="${escapeHtml(c.course_id)}" data-name="${escapeHtml(c.name)}">${escapeHtml(c.name)}</option>`
+            ).join("") || "<option value=''>No courses found</option>";
+        } catch (e) {
+            sel.innerHTML = "<option value=''>Failed to load</option>";
+        }
+    }
+
+    async function addMarkEntry() {
+        const sel = document.getElementById("mgCourseSelect");
+        const course_id = sel.value;
+        const course_name = sel.options[sel.selectedIndex]?.dataset.name || course_id;
+        const component = document.getElementById("mgComponent").value.trim();
+        const component_type = document.getElementById("mgCompType").value;
+        const obtained = parseFloat(document.getElementById("mgObtained").value);
+        const total = parseFloat(document.getElementById("mgTotal").value);
+        const msg = document.getElementById("mgSaveMsg");
+
+        if (!course_id || !component || isNaN(obtained) || isNaN(total) || total <= 0) {
+            msg.textContent = "⚠️ Fill in all fields correctly.";
+            msg.style.color = "#ef4444";
+            return;
+        }
+        if (obtained > total) {
+            msg.textContent = "⚠️ Obtained cannot exceed total.";
+            msg.style.color = "#ef4444";
+            return;
+        }
+
+        try {
+            const res = await fetch("/api/margin/add-mark", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({course_id, course_name, component, component_type, obtained, total})
+            });
+            const data = await res.json();
+            msg.textContent = "✅ Saved!";
+            msg.style.color = "#4ade80";
+            setTimeout(() => { msg.textContent = ""; }, 3000);
+            loadMarginReport();
+        } catch (e) {
+            msg.textContent = "❌ Save failed.";
+            msg.style.color = "#ef4444";
+        }
+    }
+
+    async function loadMarginReport() {
+        const container = document.getElementById("mgReportContainer");
+        if (!container) return;
+        container.innerHTML = "<p class='empty-state'>Loading...</p>";
+
+        try {
+            const data = await fetch("/api/margin/report").then(r => r.json());
+            if (!data.courses || data.courses.length === 0) {
+                container.innerHTML = "<p class='empty-state'>No marks logged yet. Add component marks above to start tracking.</p>";
+                return;
+            }
+
+            container.innerHTML = data.courses.map(course => {
+                const barPct = Math.min(100, course.current_pct || 0);
+                const levelClass = course.alert_level;
+                const components = (course.components || []).map(c =>
+                    `<tr>
+                        <td>${escapeHtml(c.component)}</td>
+                        <td><span class="type-badge">${escapeHtml(c.component_type)}</span></td>
+                        <td>${c.obtained} / ${c.total}</td>
+                        <td>${c.pct}%</td>
+                    </tr>`
+                ).join("");
+
+                return `
+                <div class="mg-course-card">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h4>${escapeHtml(course.course_name)}</h4>
+                        <span class="mg-alert-badge ${levelClass}">${levelClass}</span>
+                    </div>
+                    <div class="mg-bar-wrapper">
+                        <div class="mg-bar-fill ${levelClass}" style="width:${barPct}%"></div>
+                    </div>
+                    <div class="mg-stats">
+                        <span>Obtained: <strong>${course.obtained_total} / ${course.possible_total}</strong></span>
+                        <span>Current %: <strong>${course.current_pct}%</strong></span>
+                        <span>Buffer until A drops: <strong>${course.marks_buffer} marks</strong></span>
+                        <span>Need for A (60mk sessional): <strong>${course.marks_needed_for_A}</strong></span>
+                    </div>
+                    <p style="font-size:13px; color:var(--text-secondary); margin-top:8px;">${escapeHtml(course.message)}</p>
+                    ${components ? `<table class="mg-components-table"><thead><tr><th>Component</th><th>Type</th><th>Marks</th><th>%</th></tr></thead><tbody>${components}</tbody></table>` : ""}
+                </div>`;
+            }).join("");
+        } catch (e) {
+            container.innerHTML = `<p class="empty-state">⚠️ Failed to load: ${escapeHtml(e.message)}</p>`;
+        }
+    }
+
+    // ================================================================
+    //  PRE-SUBMISSION RUBRIC AUDITOR
+    // ================================================================
+
+    async function runRubricAudit() {
+        const draftPath = document.getElementById("raDraftPath").value.trim();
+        if (!draftPath) { alert("Please enter the draft file path."); return; }
+
+        const payload = {
+            draft_file_path: draftPath,
+            activity_id: document.getElementById("raActivityId").value.trim(),
+            course_name: document.getElementById("raCourseName").value.trim(),
+            assignment_title: document.getElementById("raAssignmentTitle").value.trim(),
+            assignment_description: document.getElementById("raDescription").value.trim()
+        };
+
+        const resultCard = document.getElementById("raResultCard");
+        const resultContent = document.getElementById("raResultContent");
+        resultCard.style.display = "block";
+        resultContent.innerHTML = "<p>🔄 Running AI Rubric Audit...</p>";
+
+        try {
+            const data = await fetch("/api/rubric/audit", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify(payload)
+            }).then(r => r.json());
+            renderAuditResult(resultContent, data);
+            loadAuditHistory();
+        } catch (e) {
+            resultContent.innerHTML = `<p class="empty-state">❌ Audit failed: ${escapeHtml(e.message)}</p>`;
+        }
+    }
+
+    async function scanSubmissionsFolder() {
+        const resultCard = document.getElementById("raResultCard");
+        const resultContent = document.getElementById("raResultContent");
+        resultCard.style.display = "block";
+        resultContent.innerHTML = "<p>📂 Scanning submissions/ folder...</p>";
+
+        try {
+            const data = await fetch("/api/rubric/scan-submissions").then(r => r.json());
+            if (data.count === 0) {
+                resultContent.innerHTML = "<p class='empty-state'>No draft files found in <code>submissions/</code>. Drop a file there first.</p>";
+                return;
+            }
+            let html = `<p style="margin-bottom:12px;"><strong>${data.count} draft(s) audited:</strong></p>`;
+            data.audits.forEach(a => {
+                const div = document.createElement("div");
+                div.style.marginBottom = "16px";
+                renderAuditResult(div, a);
+                html += div.innerHTML;
+            });
+            resultContent.innerHTML = html;
+            loadAuditHistory();
+        } catch (e) {
+            resultContent.innerHTML = `<p class="empty-state">❌ Scan failed: ${escapeHtml(e.message)}</p>`;
+        }
+    }
+
+    function renderAuditResult(container, data) {
+        const score = data.coverage_score || 0;
+        const scoreClass = score >= 80 ? "high" : score >= 50 ? "medium" : "low";
+        const missing = (data.missing_items || []);
+        const fmt = (data.formatting_issues || []);
+
+        const missingHtml = missing.length
+            ? `<h4 style="margin:12px 0 6px;">❌ Missing Rubric Items (${missing.length})</h4>
+               <ul class="ra-checklist">${missing.map(m => `<li><span class="check-icon">❌</span>${escapeHtml(m)}</li>`).join("")}</ul>`
+            : `<p style="color:#4ade80; margin:8px 0;">✅ All rubric items appear to be addressed!</p>`;
+
+        const fmtHtml = fmt.length
+            ? `<h4 style="margin:12px 0 6px;">⚠️ Formatting Issues (${fmt.length})</h4>
+               <ul class="ra-checklist">${fmt.map(f => `<li><span class="check-icon">⚠️</span>${escapeHtml(f)}</li>`).join("")}</ul>`
+            : "";
+
+        container.innerHTML = `
+            <div class="ra-score-row">
+                <div class="ra-score-circle ${scoreClass}">${score}</div>
+                <div>
+                    <strong style="font-size:15px;">Coverage Score: ${score}/100</strong>
+                    <p style="margin:4px 0; font-size:13px; color:var(--text-secondary);">
+                        File: <code>${escapeHtml(data.draft_file)}</code> &nbsp;·&nbsp;
+                        Method: <span class="ra-method-badge">${escapeHtml(data.method)}</span>
+                    </p>
+                    <p style="margin:4px 0; font-size:13px; color:var(--text-secondary);">${escapeHtml(data.audit_result)}</p>
+                </div>
+            </div>
+            ${missingHtml}
+            ${fmtHtml}
+        `;
+    }
+
+    async function loadAuditHistory() {
+        const container = document.getElementById("raHistoryContainer");
+        if (!container) return;
+        try {
+            const audits = await fetch("/api/rubric/history?limit=15").then(r => r.json());
+            if (!audits.length) {
+                container.innerHTML = "<p class='empty-state'>No audits yet.</p>";
+                return;
+            }
+            container.innerHTML = audits.map(a => {
+                const score = a.coverage_score;
+                const color = score >= 80 ? "#4ade80" : score >= 50 ? "#facc15" : "#ef4444";
+                const missing = (a.missing_items || []).length;
+                return `<div class="ra-history-row">
+                    <span class="ra-history-score" style="color:${color};">${score}</span>
+                    <div>
+                        <strong>${escapeHtml(a.draft_file)}</strong>
+                        ${a.course_name ? `<span style="font-size:11px; color:var(--text-muted);"> · ${escapeHtml(a.course_name)}</span>` : ""}
+                        <br><span style="font-size:12px; color:var(--text-secondary);">${escapeHtml(a.audit_result?.slice(0, 120))}...</span>
+                    </div>
+                    <span class="ra-method-badge">${escapeHtml(a.method)}</span>
+                    <span style="font-size:11px; color:var(--text-muted); white-space:nowrap;">
+                        ${missing} missing · ${a.audited_at?.slice(0,16).replace("T"," ")}
+                    </span>
+                </div>`;
+            }).join("");
+        } catch (e) {
+            container.innerHTML = `<p class="empty-state">Failed: ${escapeHtml(e.message)}</p>`;
+        }
+    }
+
+    // ================================================================
+    //  WIRE: Load data on tab switch for new panes
+    // ================================================================
+    const _originalSetupNavigation = setupNavigation;
+    navItems.forEach(item => {
+        item.addEventListener("click", () => {
+            const tab = item.getAttribute("data-tab");
+            if (tab === "margin-guard") {
+                populateCourseDropdown();
+                loadMarginReport();
+            } else if (tab === "rubric-auditor") {
+                loadAuditHistory();
+            }
+        });
+    });
+
+    // Expose to HTML onclick= attributes (outside DOMContentLoaded closure)
+    window.addMarkEntry = addMarkEntry;
+    window.loadMarginReport = loadMarginReport;
+    window.runRubricAudit = runRubricAudit;
+    window.scanSubmissionsFolder = scanSubmissionsFolder;
+    window.loadAuditHistory = loadAuditHistory;
 });
+
