@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ODOCUST Academic Monitoring Agent</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-icon">🎓</div>
+                <div class="brand-text">
+                    <h2>ODOCUST</h2>
+                    <span>Academic Agent</span>
+                </div>
+            </div>
+
+            <nav class="nav-menu">
+                <button class="nav-item active" data-tab="overview">
+                    <span class="icon">📊</span> Overview
+                </button>
+                <button class="nav-item" data-tab="deadlines">
+                    <span class="icon">⏰</span> Deadlines & Timeline
+                </button>
+                <button class="nav-item" data-tab="courses">
+                    <span class="icon">📚</span> My Courses
+                </button>
+                <button class="nav-item" data-tab="activities">
+                    <span class="icon">📋</span> All Activities
+                </button>
+                <button class="nav-item" data-tab="notifications">
+                    <span class="icon">📱</span> WhatsApp Alerts
+                </button>
+                <button class="nav-item" data-tab="settings">
+                    <span class="icon">⚙️</span> Settings
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="portal-status-badge" id="portalStatusBadge">
+                    <span class="pulse-dot"></span>
+                    <span id="portalStatusText">Connecting...</span>
+                </div>
+                <button class="btn btn-primary btn-block btn-sync" id="btnSyncNow">
+                    🔄 Sync Now
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Top Header -->
+            <header class="topbar">
+                <div class="topbar-title">
+                    <h1 id="pageTitle">Overview</h1>
+                    <span class="last-checked" id="lastCheckedText">Last checked: Just now</span>
+                </div>
+                <div class="topbar-actions">
+                    <span class="badge badge-portal">Tasjeel / Odoo 15</span>
+                </div>
+            </header>
+
+            <div class="tab-content" id="tabContent">
+                <!-- TAB 1: OVERVIEW -->
+                <section class="tab-pane active" id="pane-overview">
+                    <div class="stats-grid">
+                        <div class="stat-card stat-critical">
+                            <div class="stat-icon">🚨</div>
+                            <div class="stat-data">
+                                <div class="stat-value" id="statUpcoming24h">0</div>
+                                <div class="stat-label">Due Within 24h</div>
+                            </div>
+                        </div>
+                        <div class="stat-card stat-pending">
+                            <div class="stat-icon">⏳</div>
+                            <div class="stat-data">
+                                <div class="stat-value" id="statPending">0</div>
+                                <div class="stat-label">Pending Submissions</div>
+                            </div>
+                        </div>
+                        <div class="stat-card stat-completed">
+                            <div class="stat-icon">✅</div>
+                            <div class="stat-data">
+                                <div class="stat-value" id="statSubmitted">0</div>
+                                <div class="stat-label">Submitted / Graded</div>
+                            </div>
+                        </div>
+                        <div class="stat-card stat-overdue">
+                            <div class="stat-icon">⚠️</div>
+                            <div class="stat-data">
+                                <div class="stat-value" id="statOverdue">0</div>
+                                <div class="stat-label">Overdue Tasks</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-split">
+                        <div class="card flex-2">
+                            <div class="card-header">
+                                <h3>🔥 Urgent Approaching Deadlines</h3>
+                            </div>
+                            <div class="urgent-list" id="urgentDeadlinesList">
+                                <p class="empty-state">No imminent deadlines within 72 hours! 🎉</p>
+                            </div>
+                        </div>
+
+                        <div class="card flex-1">
+                            <div class="card-header">
+                                <h3>🔔 Recent WhatsApp Alerts</h3>
+                            </div>
+                            <div class="compact-notifications" id="recentAlertsList">
+                                <p class="empty-state">No alerts recorded yet.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TAB 2: DEADLINES & TIMELINE -->
+                <section class="tab-pane" id="pane-deadlines">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>⏳ Academic Countdown Timeline</h3>
+                            <div class="filters">
+                                <select id="filterTimelineCourse" class="form-control form-control-sm">
+                                    <option value="">All Courses</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="timeline-container" id="timelineContainer">
+                            <!-- Injected by JS -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TAB 3: COURSES -->
+                <section class="tab-pane" id="pane-courses">
+                    <div class="courses-grid" id="coursesGrid">
+                        <!-- Injected by JS -->
+                    </div>
+                </section>
+
+                <!-- TAB 4: ALL ACTIVITIES -->
+                <section class="tab-pane" id="pane-activities">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="table-controls">
+                                <input type="text" id="searchActivities" placeholder="Search tasks, courses, announcements..." class="form-control">
+                                <select id="filterType" class="form-control">
+                                    <option value="">All Types</option>
+                                    <option value="Assignment">Assignments</option>
+                                    <option value="Project">Projects</option>
+                                    <option value="Quiz">Quizzes</option>
+                                    <option value="Announcement">Announcements</option>
+                                </select>
+                                <select id="filterStatus" class="form-control">
+                                    <option value="">All Statuses</option>
+                                    <option value="Not Submitted">Not Submitted</option>
+                                    <option value="Submitted">Submitted</option>
+                                    <option value="Graded">Graded</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Priority</th>
+                                        <th>Type</th>
+                                        <th>Course</th>
+                                        <th>Title & Details</th>
+                                        <th>Deadline</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="activitiesTableBody">
+                                    <!-- Injected by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TAB 5: NOTIFICATIONS LOG -->
+                <section class="tab-pane" id="pane-notifications">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>📱 WhatsApp Dispatch History</h3>
+                        </div>
+                        <div class="notification-logs" id="notificationsLogList">
+                            <!-- Injected by JS -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TAB 6: SETTINGS -->
+                <section class="tab-pane" id="pane-settings">
+                    <div class="card max-w-700">
+                        <div class="card-header">
+                            <h3>⚙️ Agent & Notification Settings</h3>
+                        </div>
+                        <form id="settingsForm" class="settings-form">
+                            <div class="form-group">
+                                <label>Portal Monitoring Interval (Minutes)</label>
+                                <input type="number" id="settingInterval" class="form-control" min="5" max="180" value="15">
+                                <small class="form-hint">How often the agent checks ODOCUST in the background (default: 15 mins).</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label>WhatsApp Provider</label>
+                                <select id="settingProvider" class="form-control">
+                                    <option value="console_log">Console / Dashboard Only (Testing)</option>
+                                    <option value="callmebot">CallMeBot (Free for Personal WhatsApp)</option>
+                                    <option value="twilio">Twilio WhatsApp (Official API)</option>
+                                    <option value="greenapi">Green-API Gateway</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Recipient WhatsApp Number</label>
+                                <input type="text" id="settingPhone" class="form-control" placeholder="+923001234567">
+                                <small class="form-hint">Enter your phone number with international country code (e.g. +92 for Pakistan).</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Deadline Reminder Intervals (Hours Before Deadline)</label>
+                                <input type="text" id="settingReminderHours" class="form-control" value="72, 48, 24, 12, 6, 3, 1">
+                                <small class="form-hint">Comma-separated countdown checkpoints.</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Daily Summary Morning Time</label>
+                                <input type="time" id="settingDailyTime" class="form-control" value="08:00">
+                            </div>
+
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">Save Settings</button>
+                                <button type="button" class="btn btn-outline" id="btnTestWhatsApp">Send Test WhatsApp</button>
+                            </div>
+                        </form>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
