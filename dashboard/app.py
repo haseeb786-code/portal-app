@@ -40,9 +40,9 @@ def create_dashboard_app(database: Database, monitor_agent=None) -> FastAPI:
 
         summary["profile"] = {
             "student_id": "BSE233195",
-            "current_cgpa": float(profile.get("current_cgpa", getattr(config, "STUDENT_CURRENT_CGPA", 3.20))),
+            "current_cgpa": float(profile.get("current_cgpa", getattr(config, "STUDENT_CURRENT_CGPA", 2.50))),
             "completed_credits": int(profile.get("completed_credits", getattr(config, "STUDENT_COMPLETED_CREDITS", 100))),
-            "target_gpa": float(profile.get("target_gpa", getattr(config, "STUDENT_TARGET_GPA", 3.50)))
+            "target_gpa": float(profile.get("target_gpa", getattr(config, "STUDENT_TARGET_GPA", 4.00)))
         }
         summary["avg_attendance"] = avg_att
         summary["fyp_activities_count"] = len(fyp_acts)
@@ -125,7 +125,12 @@ def create_dashboard_app(database: Database, monitor_agent=None) -> FastAPI:
 
     @app.get("/api/settings")
     async def get_settings():
-        return database.get_all_settings()
+        settings = database.get_all_settings()
+        profile = database.get_student_profile()
+        settings["current_cgpa"] = profile.get("current_cgpa", "2.50")
+        settings["completed_credits"] = profile.get("completed_credits", "100")
+        settings["target_gpa"] = profile.get("target_gpa", "4.00")
+        return settings
 
     class SettingsUpdate(BaseModel):
         settings: Dict[str, str]
@@ -133,16 +138,19 @@ def create_dashboard_app(database: Database, monitor_agent=None) -> FastAPI:
     @app.post("/api/settings")
     async def update_settings(payload: SettingsUpdate):
         for k, v in payload.settings.items():
-            database.set_setting(k, str(v))
+            if k in ("current_cgpa", "completed_credits", "target_gpa"):
+                database.set_student_profile(k, str(v))
+            else:
+                database.set_setting(k, str(v))
         return {"status": "success", "message": "Settings updated."}
 
     @app.get("/api/gpa/projection")
     async def get_gpa_projection():
         from engine.gpa_engine import GPAEngine
         profile = database.get_student_profile()
-        current_cgpa = float(profile.get("current_cgpa", 3.20))
+        current_cgpa = float(profile.get("current_cgpa", 2.50))
         completed_credits = int(profile.get("completed_credits", 100))
-        target_gpa = float(profile.get("target_gpa", 3.50))
+        target_gpa = float(profile.get("target_gpa", 4.00))
 
         courses = database.get_all_courses()
         sem_courses = [{"course_name": c.name, "credits": 3, "expected_grade": "A"} for c in courses]
@@ -213,8 +221,8 @@ def create_dashboard_app(database: Database, monitor_agent=None) -> FastAPI:
             "courses": courses,
             "all_activities": all_activities,
             "pending_activities": pending,
-            "current_cgpa": profile.get("current_cgpa", 3.20),
-            "completed_credits": profile.get("completed_credits", 100),
+            "current_cgpa": float(profile.get("current_cgpa", 2.50)),
+            "completed_credits": int(profile.get("completed_credits", 100)),
             "downloaded_files": downloaded_files
         }
 

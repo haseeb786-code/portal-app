@@ -162,7 +162,7 @@
                             <div class="banner-metrics">
                                 <div class="banner-metric-box">
                                     <span class="b-metric-label">Current CGPA</span>
-                                    <span class="b-metric-val" id="ovCurrentCgpa">3.20</span>
+                                    <span class="b-metric-val" id="ovCurrentCgpa">2.50</span>
                                     <span class="b-metric-sub">100 Credit Hours</span>
                                 </div>
                                 <div class="banner-metric-box highlight">
@@ -431,7 +431,7 @@
                                 <div class="form-row">
                                     <div class="form-group col">
                                         <label>Current CGPA</label>
-                                        <input type="number" step="0.01" id="simCurrentCgpa" class="form-control" value="3.20">
+                                        <input type="number" step="0.01" id="simCurrentCgpa" class="form-control" value="2.50">
                                     </div>
                                     <div class="form-group col">
                                         <label>Completed Credits</label>
@@ -794,9 +794,21 @@
                                 <small class="form-hint">Comma-separated countdown checkpoints.</small>
                             </div>
 
-                            <div class="form-group">
-                                <label>Daily Summary Morning Time</label>
-                                <input type="time" id="settingDailyTime" class="form-control" value="08:00">
+                            <div class="calc-divider"></div>
+                            <h4 style="margin-bottom: 12px; color: #fff;">🎓 Student Academic Profile</h4>
+                            <div class="form-row">
+                                <div class="form-group col">
+                                    <label>Current CGPA</label>
+                                    <input type="number" step="0.01" id="settingCurrentCgpa" class="form-control" value="2.50">
+                                </div>
+                                <div class="form-group col">
+                                    <label>Completed Credits</label>
+                                    <input type="number" id="settingCompletedCredits" class="form-control" value="100">
+                                </div>
+                                <div class="form-group col">
+                                    <label>Semester Target GPA</label>
+                                    <input type="number" step="0.01" id="settingTargetGpa" class="form-control" value="4.00">
+                                </div>
                             </div>
 
                             <div class="form-actions">

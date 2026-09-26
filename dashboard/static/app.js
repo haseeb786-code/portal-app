@@ -188,7 +188,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             // Executive profile metrics
             if (data.profile) {
-                setInnerText("ovCurrentCgpa", data.profile.current_cgpa ? data.profile.current_cgpa.toFixed(2) : "3.20");
+                setInnerText("ovCurrentCgpa", data.profile.current_cgpa ? data.profile.current_cgpa.toFixed(2) : "2.50");
                 setInnerText("ovTargetGpa", data.profile.target_gpa ? data.profile.target_gpa.toFixed(2) : "4.00");
                 setInnerText("topbarGpaTarget", data.profile.target_gpa ? data.profile.target_gpa.toFixed(2) : "4.00");
             }
@@ -268,6 +268,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 setValueIfElem("settingReminderHours", settings.reminder_hours.replace(/[\[\]]/g, ''));
             }
             setValueIfElem("settingDailyTime", settings.daily_summary_time);
+            setValueIfElem("settingCurrentCgpa", settings.current_cgpa || "2.50");
+            setValueIfElem("settingCompletedCredits", settings.completed_credits || "100");
+            setValueIfElem("settingTargetGpa", settings.target_gpa || "4.00");
         } catch (e) {
             console.warn("fetchSettings error:", e);
         }
@@ -628,7 +631,10 @@ document.addEventListener("DOMContentLoaded", () => {
             whatsapp_provider: document.getElementById("settingProvider").value,
             whatsapp_to_number: document.getElementById("settingPhone").value,
             reminder_hours: JSON.stringify(document.getElementById("settingReminderHours").value.split(",").map(n => parseInt(n.trim()))),
-            daily_summary_time: document.getElementById("settingDailyTime").value
+            daily_summary_time: document.getElementById("settingDailyTime").value,
+            current_cgpa: document.getElementById("settingCurrentCgpa") ? document.getElementById("settingCurrentCgpa").value : "2.50",
+            completed_credits: document.getElementById("settingCompletedCredits") ? document.getElementById("settingCompletedCredits").value : "100",
+            target_gpa: document.getElementById("settingTargetGpa") ? document.getElementById("settingTargetGpa").value : "4.00"
         };
 
         try {
@@ -639,6 +645,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             const data = await res.json();
             alert("Settings saved successfully!");
+            fetchOverview();
         } catch (err) {
             alert("Failed to save settings: " + err.message);
         }
@@ -716,7 +723,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     async function simulateGpa() {
-        const curCgpa = parseFloat(document.getElementById("simCurrentCgpa").value) || 3.20;
+        const curCgpa = parseFloat(document.getElementById("simCurrentCgpa").value) || 2.50;
         const credits = parseInt(document.getElementById("simCredits").value) || 100;
         const targetGpa = parseFloat(document.getElementById("simTargetGpa").value) || 4.00;
         const resultBox = document.getElementById("gpaResultBox");
